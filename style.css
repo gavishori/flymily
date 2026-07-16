@@ -4,30 +4,6 @@
   --glass: color-mix(in oklab, var(--card) 78%, transparent);
 }
 
-/* Final readability guard: keep the main header legible in light theme. */
-body[data-theme="light"] header,
-body[data-theme="light"] .app > header{
-  background:var(--brand,#1a73ff) !important;
-  color:#fff !important;
-  border-bottom:1px solid color-mix(in oklab, var(--brand,#1a73ff) 72%, #000 28%) !important;
-}
-
-body[data-theme="light"] header .brand,
-body[data-theme="light"] header .brand-text,
-body[data-theme="light"] header .header-dest,
-body[data-theme="light"] header .btn,
-body[data-theme="light"] header button,
-body[data-theme="light"] header #userBadge,
-body[data-theme="light"] header #userBadge span{
-  color:#fff !important;
-}
-
-body[data-theme="light"] header .btn,
-body[data-theme="light"] header button,
-body[data-theme="light"] header #userBadge{
-  border-color:rgba(255,255,255,.78) !important;
-}
-
 /* ABSOLUTE EOF v2: readable mobile editor order and typography. */
 @media (max-width: 820px){
   html body.mobile-ui dialog#expenseModal > .body,
@@ -4981,31 +4957,12 @@ header .btn:has(svg rect[x="5"][y="2"][width="14"][height="20"]) { display:none 
 
 
 /* --- Blue link/mail chips --- */
-:root{ --link-blue:#1a73e8; }
-
-
-
-
 
 
 /* === Override: link/mail display as blue icons only === */
 
 
-
-
-
-
-:root { --link-blue: #1a73e8; }
-
-
-
-
-
-
 /* === Link/Mail icons: emoji-only, blue (requested) === */
-:root{ --link-blue: #1a73e8; }
-
-
 
 
 /* === Single source of truth: link/mail icons === */
