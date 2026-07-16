@@ -1,0 +1,141 @@
+/* =========================================================================
+   FLYMILY — Modern Theme Layer (v1)
+   -------------------------------------------------------------------------
+   This file is loaded AFTER style.css and mobile-auth.css on purpose.
+   Instead of editing thousands of existing rules (risky without a live
+   browser to test every screen), it refines the shared design tokens and
+   restyles the most common, reused building blocks: buttons, inputs, cards,
+   dialogs/modals, the header, tab navigation, and scrollbars. Because almost
+   every component already reads from the CSS variables below (--brand,
+   --card, --radius, etc.), refining the tokens alone modernizes the whole
+   app; the component rules on top add polish (motion, shadows, focus rings)
+   that the legacy file doesn't have everywhere yet.
+   ========================================================================= */
+
+:root{
+  /* Softer, more contemporary palette on top of the existing brand colors */
+  --radius-sm: 8px;
+  --radius: 14px;
+  --radius-lg: 20px;
+  --radius-pill: 999px;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  --ease: cubic-bezier(.2,.8,.2,1);
+  --dur: .18s;
+
+  --shadow-sm: 0 2px 8px rgba(16,24,40,.06);
+  --shadow-md: 0 8px 24px rgba(16,24,40,.10);
+  --shadow-lg: 0 20px 48px rgba(16,24,40,.16);
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+html, body{
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Rubik, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+*{ scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+*::-webkit-scrollbar{ width:10px; height:10px; }
+*::-webkit-scrollbar-thumb{ background:var(--border); border-radius:99px; border:2px solid transparent; background-clip:padding-box; }
+*::-webkit-scrollbar-track{ background:transparent; }
+
+/* ---------- Buttons ---------- */
+.btn{
+  border-radius: var(--radius-sm) !important;
+  transition: transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease),
+              background-color var(--dur) var(--ease), border-color var(--dur) var(--ease);
+  font-weight: 600;
+}
+.btn:hover{ transform: translateY(-1px); box-shadow: var(--shadow-sm); }
+.btn:active{ transform: translateY(0); }
+.btn:focus-visible{ outline: 2px solid var(--brand); outline-offset: 2px; }
+.btn.primary{
+  background: var(--brand) !important;
+  color: #fff !important;
+  border-color: var(--brand) !important;
+  box-shadow: var(--shadow-sm);
+}
+.btn.primary:hover{ box-shadow: var(--shadow-md); filter: brightness(1.05); }
+.btn.danger:hover{ background: color-mix(in oklab, var(--danger) 12%, transparent); }
+
+/* Floating quick-add button (mobile) gets a bit more presence */
+#btnQuickAddExpense{
+  box-shadow: var(--shadow-lg) !important;
+  transition: transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+}
+#btnQuickAddExpense:active{ transform: scale(.94); }
+
+/* ---------- Inputs ---------- */
+.input, input, select, textarea{
+  border-radius: var(--radius-sm) !important;
+  transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+}
+.input:focus, input:focus, select:focus, textarea:focus{
+  outline: none !important;
+  border-color: var(--brand) !important;
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--brand) 22%, transparent) !important;
+}
+
+/* ---------- Cards ---------- */
+.card, .trip-card, .login-card, .share-card{
+  border-radius: var(--radius) !important;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow var(--dur) var(--ease), transform var(--dur) var(--ease);
+}
+.trip-card:hover{ box-shadow: var(--shadow-md); transform: translateY(-2px); }
+
+/* ---------- Dialogs / Modals ---------- */
+dialog{
+  border: none !important;
+  border-radius: var(--radius-lg) !important;
+  box-shadow: var(--shadow-lg) !important;
+  animation: modalIn var(--dur) var(--ease);
+}
+dialog::backdrop{
+  background: color-mix(in oklab, #0b0e14 55%, transparent);
+  backdrop-filter: blur(3px);
+}
+@keyframes modalIn{
+  from{ opacity:0; transform: translateY(8px) scale(.98); }
+  to{ opacity:1; transform: translateY(0) scale(1); }
+}
+@media (prefers-reduced-motion: reduce){
+  dialog{ animation: none; }
+  .btn, .trip-card{ transition: none; }
+}
+
+/* ---------- Header ---------- */
+.app > header, header{
+  position: sticky; top: 0; z-index: 40;
+  backdrop-filter: saturate(160%) blur(10px);
+}
+
+/* ---------- Tabs / nav ---------- */
+nav.tabs{
+  display: flex; gap: var(--space-2);
+}
+nav.tabs a, nav.tabs button, nav.tabs .tab{
+  border-radius: var(--radius-pill) !important;
+  transition: background-color var(--dur) var(--ease), color var(--dur) var(--ease);
+}
+nav.tabs [aria-selected="true"], nav.tabs .active{
+  background: var(--brand) !important;
+  color: #fff !important;
+}
+
+/* ---------- Offline / sync pill (matches firebase.js injected element) ---------- */
+#flymilyOfflinePill{ font-family: inherit !important; }
+
+/* ---------- Reduced-chrome utility for dense mobile screens ---------- */
+@media (max-width: 820px){
+  .card, .trip-card{ border-radius: var(--radius) !important; }
+  .btn{ min-height: 40px; }
+}
