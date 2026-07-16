@@ -7,59 +7,43 @@
 /* ABSOLUTE EOF v2: readable mobile editor order and typography. */
 @media (max-width: 820px){
   html body.mobile-ui dialog#expenseModal > .body,
-  html body.mobile-ui dialog#journalModal > .body,
-  html body.mobile-editor-redesign dialog#expenseModal > .body,
-  html body.mobile-editor-redesign dialog#journalModal > .body{
+  html body.mobile-ui dialog#journalModal > .body{
     gap:10px !important;
     padding:10px 12px 18px !important;
   }
 
   html body.mobile-ui dialog#expenseModal > .body > label:has(#expTitle),
-  html body.mobile-editor-redesign dialog#expenseModal > .body > label:has(#expTitle),
-  html body.mobile-ui dialog#journalModal > .body > label:has(#jrTitle),
-  html body.mobile-editor-redesign dialog#journalModal > .body > label:has(#jrTitle){
+  html body.mobile-ui dialog#journalModal > .body > label:has(#jrTitle){
     order:1 !important;
   }
 
-  html body.mobile-ui dialog#expenseModal .expense-main-row,
-  html body.mobile-editor-redesign dialog#expenseModal .expense-main-row{
+  html body.mobile-ui dialog#expenseModal .expense-main-row{
     order:2 !important;
   }
 
   html body.mobile-ui dialog#expenseModal .expense-meta-row,
-  html body.mobile-editor-redesign dialog#expenseModal .expense-meta-row,
-  html body.mobile-ui dialog#journalModal .journal-meta-row,
-  html body.mobile-editor-redesign dialog#journalModal .journal-meta-row{
+  html body.mobile-ui dialog#journalModal .journal-meta-row{
     order:3 !important;
   }
 
   html body.mobile-ui dialog#expenseModal > .body > label:has(#expText),
-  html body.mobile-editor-redesign dialog#expenseModal > .body > label:has(#expText),
-  html body.mobile-ui dialog#journalModal > .body > label:has(#jrText),
-  html body.mobile-editor-redesign dialog#journalModal > .body > label:has(#jrText){
+  html body.mobile-ui dialog#journalModal > .body > label:has(#jrText){
     order:4 !important;
   }
 
   html body.mobile-ui dialog#expenseModal #rtfBubbleExp,
-  html body.mobile-editor-redesign dialog#expenseModal #rtfBubbleExp,
-  html body.mobile-ui dialog#journalModal #rtfBubble,
-  html body.mobile-editor-redesign dialog#journalModal #rtfBubble{
+  html body.mobile-ui dialog#journalModal #rtfBubble{
     order:5 !important;
   }
 
   html body.mobile-ui dialog#expenseModal > .body > label,
-  html body.mobile-ui dialog#journalModal > .body > label,
-  html body.mobile-editor-redesign dialog#expenseModal > .body > label,
-  html body.mobile-editor-redesign dialog#journalModal > .body > label{
+  html body.mobile-ui dialog#journalModal > .body > label{
     font-weight:400 !important;
   }
 
   html body.mobile-ui dialog#expenseModal .field-label,
   html body.mobile-ui dialog#journalModal .field-label,
-  html body.mobile-editor-redesign dialog#expenseModal .field-label,
-  html body.mobile-editor-redesign dialog#journalModal .field-label,
-  html body.mobile-ui dialog#expenseModal .expense-meta-caption,
-  html body.mobile-editor-redesign dialog#expenseModal .expense-meta-caption{
+  html body.mobile-ui dialog#expenseModal .expense-meta-caption{
     font-weight:600 !important;
     color:var(--muted,#415266) !important;
   }
@@ -68,19 +52,12 @@
   html body.mobile-ui dialog#expenseModal select,
   html body.mobile-ui dialog#expenseModal button.input,
   html body.mobile-ui dialog#journalModal input,
-  html body.mobile-ui dialog#journalModal select,
-  html body.mobile-editor-redesign dialog#expenseModal input,
-  html body.mobile-editor-redesign dialog#expenseModal select,
-  html body.mobile-editor-redesign dialog#expenseModal button.input,
-  html body.mobile-editor-redesign dialog#journalModal input,
-  html body.mobile-editor-redesign dialog#journalModal select{
+  html body.mobile-ui dialog#journalModal select{
     font-weight:400 !important;
   }
 
   html body.mobile-ui dialog#expenseModal #expText.input.rtf,
-  html body.mobile-ui dialog#journalModal #jrText.input.rtf,
-  html body.mobile-editor-redesign dialog#expenseModal #expText.input.rtf,
-  html body.mobile-editor-redesign dialog#journalModal #jrText.input.rtf{
+  html body.mobile-ui dialog#journalModal #jrText.input.rtf{
     min-height:220px !important;
     padding:12px !important;
     font-size:16px !important;
@@ -90,27 +67,19 @@
   }
 
   html body.mobile-ui dialog#expenseModal #expText.input.rtf *,
-  html body.mobile-ui dialog#journalModal #jrText.input.rtf *,
-  html body.mobile-editor-redesign dialog#expenseModal #expText.input.rtf *,
-  html body.mobile-editor-redesign dialog#journalModal #jrText.input.rtf *{
+  html body.mobile-ui dialog#journalModal #jrText.input.rtf *{
     font-weight:inherit !important;
   }
 
   html body.mobile-ui dialog#expenseModal #expText.input.rtf b,
   html body.mobile-ui dialog#expenseModal #expText.input.rtf strong,
   html body.mobile-ui dialog#journalModal #jrText.input.rtf b,
-  html body.mobile-ui dialog#journalModal #jrText.input.rtf strong,
-  html body.mobile-editor-redesign dialog#expenseModal #expText.input.rtf b,
-  html body.mobile-editor-redesign dialog#expenseModal #expText.input.rtf strong,
-  html body.mobile-editor-redesign dialog#journalModal #jrText.input.rtf b,
-  html body.mobile-editor-redesign dialog#journalModal #jrText.input.rtf strong{
+  html body.mobile-ui dialog#journalModal #jrText.input.rtf strong{
     font-weight:700 !important;
   }
 
   html body.mobile-ui dialog#expenseModal #rtfBubbleExp,
-  html body.mobile-ui dialog#journalModal #rtfBubble,
-  html body.mobile-editor-redesign dialog#expenseModal #rtfBubbleExp,
-  html body.mobile-editor-redesign dialog#journalModal #rtfBubble{
+  html body.mobile-ui dialog#journalModal #rtfBubble{
     padding:6px !important;
     min-height:38px !important;
     border-radius:10px !important;
@@ -119,8 +88,6 @@
 
 /* TRUE EOF: redesigned mobile editor sheets for expense and journal. */
 @media (max-width: 820px){
-  html body.mobile-editor-redesign dialog#expenseModal.modal[open],
-  html body.mobile-editor-redesign dialog#journalModal.modal[open],
   html body.mobile-ui dialog#expenseModal.modal[open],
   html body.mobile-ui dialog#journalModal.modal[open]{
     position:fixed !important;
@@ -146,9 +113,6 @@
     background:var(--card,#fff) !important;
     direction:rtl !important;
   }
-
-  html body.mobile-editor-redesign dialog#expenseModal > header,
-  html body.mobile-editor-redesign dialog#journalModal > header,
   html body.mobile-ui dialog#expenseModal > header,
   html body.mobile-ui dialog#journalModal > header{
     grid-row:1 !important;
@@ -161,18 +125,12 @@
     justify-content:space-between !important;
     overflow:hidden !important;
   }
-
-  html body.mobile-editor-redesign dialog#expenseModal > header strong,
-  html body.mobile-editor-redesign dialog#journalModal > header strong,
   html body.mobile-ui dialog#expenseModal > header strong,
   html body.mobile-ui dialog#journalModal > header strong{
     font-size:18px !important;
     line-height:1.2 !important;
     font-weight:700 !important;
   }
-
-  html body.mobile-editor-redesign dialog#expenseModal > .body,
-  html body.mobile-editor-redesign dialog#journalModal > .body,
   html body.mobile-ui dialog#expenseModal > .body,
   html body.mobile-ui dialog#journalModal > .body{
     grid-row:2 !important;
@@ -191,9 +149,6 @@
     overscroll-behavior:contain !important;
     background:var(--bg,#f6f7fb) !important;
   }
-
-  html body.mobile-editor-redesign dialog#expenseModal > .body > label,
-  html body.mobile-editor-redesign dialog#journalModal > .body > label,
   html body.mobile-ui dialog#expenseModal > .body > label,
   html body.mobile-ui dialog#journalModal > .body > label{
     display:flex !important;
@@ -211,9 +166,6 @@
     line-height:1.25 !important;
     font-weight:600 !important;
   }
-
-  html body.mobile-editor-redesign dialog#expenseModal .field-label,
-  html body.mobile-editor-redesign dialog#journalModal .field-label,
   html body.mobile-ui dialog#expenseModal .field-label,
   html body.mobile-ui dialog#journalModal .field-label{
     display:block !important;
@@ -221,9 +173,6 @@
     line-height:1.25 !important;
     font-weight:600 !important;
   }
-
-  html body.mobile-editor-redesign dialog#expenseModal #expTitle,
-  html body.mobile-editor-redesign dialog#journalModal #jrTitle,
   html body.mobile-ui dialog#expenseModal #expTitle,
   html body.mobile-ui dialog#journalModal #jrTitle{
     height:44px !important;
@@ -234,9 +183,6 @@
     font-size:16px !important;
     line-height:1.25 !important;
   }
-
-  html body.mobile-editor-redesign dialog#expenseModal #expText.input.rtf,
-  html body.mobile-editor-redesign dialog#journalModal #jrText.input.rtf,
   html body.mobile-ui dialog#expenseModal #expText.input.rtf,
   html body.mobile-ui dialog#journalModal #jrText.input.rtf{
     display:block !important;
@@ -263,24 +209,15 @@
     user-select:text !important;
     -webkit-user-select:text !important;
   }
-
-  html body.mobile-editor-redesign dialog#expenseModal #expText.input.rtf:focus,
-  html body.mobile-editor-redesign dialog#journalModal #jrText.input.rtf:focus,
   html body.mobile-ui dialog#expenseModal #expText.input.rtf:focus,
   html body.mobile-ui dialog#journalModal #jrText.input.rtf:focus{
     outline:2px solid var(--brand,#1a73ff) !important;
     outline-offset:2px !important;
   }
-
-  html body.mobile-editor-redesign dialog#expenseModal .editor-resize-handle,
-  html body.mobile-editor-redesign dialog#journalModal .editor-resize-handle,
   html body.mobile-ui dialog#expenseModal .editor-resize-handle,
   html body.mobile-ui dialog#journalModal .editor-resize-handle{
     display:none !important;
   }
-
-  html body.mobile-editor-redesign dialog#expenseModal #rtfBubbleExp,
-  html body.mobile-editor-redesign dialog#journalModal #rtfBubble,
   html body.mobile-ui dialog#expenseModal #rtfBubbleExp,
   html body.mobile-ui dialog#journalModal #rtfBubble{
     position:static !important;
@@ -301,15 +238,10 @@
     background:#fff !important;
     overflow:visible !important;
   }
-
-  html body.mobile-editor-redesign dialog#expenseModal #rtfBubbleExp[hidden],
-  html body.mobile-editor-redesign dialog#journalModal #rtfBubble[hidden],
   html body.mobile-ui dialog#expenseModal #rtfBubbleExp[hidden],
   html body.mobile-ui dialog#journalModal #rtfBubble[hidden]{
     display:none !important;
   }
-
-  html body.mobile-editor-redesign dialog#expenseModal .expense-main-row,
   html body.mobile-ui dialog#expenseModal .expense-main-row{
     display:grid !important;
     grid-template-columns:minmax(0,1fr) minmax(92px,.45fr) 52px !important;
@@ -320,8 +252,6 @@
     max-height:none !important;
     overflow:visible !important;
   }
-
-  html body.mobile-editor-redesign dialog#expenseModal .expense-main-row > label,
   html body.mobile-ui dialog#expenseModal .expense-main-row > label{
     display:flex !important;
     flex-direction:column !important;
@@ -333,9 +263,6 @@
     font-size:13px !important;
     line-height:1.2 !important;
   }
-
-  html body.mobile-editor-redesign dialog#expenseModal .expense-main-row .input,
-  html body.mobile-editor-redesign dialog#expenseModal .expense-main-row #expCurrBtn,
   html body.mobile-ui dialog#expenseModal .expense-main-row .input,
   html body.mobile-ui dialog#expenseModal .expense-main-row #expCurrBtn{
     height:42px !important;
@@ -346,9 +273,6 @@
     font-size:16px !important;
     line-height:1.2 !important;
   }
-
-  html body.mobile-editor-redesign dialog#expenseModal .expense-meta-row,
-  html body.mobile-editor-redesign dialog#journalModal .journal-meta-row,
   html body.mobile-ui dialog#expenseModal .expense-meta-row,
   html body.mobile-ui dialog#journalModal .journal-meta-row{
     display:grid !important;
@@ -366,30 +290,18 @@
     overflow:visible !important;
     direction:rtl !important;
   }
-
-  html body.mobile-editor-redesign dialog#expenseModal .expense-meta-row > .exp-date-col,
-  html body.mobile-editor-redesign dialog#journalModal .journal-meta-row > .jr-date-col,
   html body.mobile-ui dialog#expenseModal .expense-meta-row > .exp-date-col,
   html body.mobile-ui dialog#journalModal .journal-meta-row > .jr-date-col{
     grid-area:date !important;
   }
-
-  html body.mobile-editor-redesign dialog#expenseModal .expense-meta-row > .exp-time-col,
-  html body.mobile-editor-redesign dialog#journalModal .journal-meta-row > .jr-time-col,
   html body.mobile-ui dialog#expenseModal .expense-meta-row > .exp-time-col,
   html body.mobile-ui dialog#journalModal .journal-meta-row > .jr-time-col{
     grid-area:time !important;
   }
-
-  html body.mobile-editor-redesign dialog#expenseModal .expense-meta-row > .exp-location-col,
-  html body.mobile-editor-redesign dialog#journalModal .journal-meta-row > .jr-location-col,
   html body.mobile-ui dialog#expenseModal .expense-meta-row > .exp-location-col,
   html body.mobile-ui dialog#journalModal .journal-meta-row > .jr-location-col{
     grid-area:location !important;
   }
-
-  html body.mobile-editor-redesign dialog#expenseModal .expense-meta-row > *,
-  html body.mobile-editor-redesign dialog#journalModal .journal-meta-row > *,
   html body.mobile-ui dialog#expenseModal .expense-meta-row > *,
   html body.mobile-ui dialog#journalModal .journal-meta-row > *{
     width:100% !important;
@@ -405,8 +317,6 @@
     line-height:1.2 !important;
     box-sizing:border-box !important;
   }
-
-  html body.mobile-editor-redesign dialog#expenseModal .expense-meta-caption,
   html body.mobile-ui dialog#expenseModal .expense-meta-caption{
     display:block !important;
     margin:0 0 6px !important;
@@ -414,11 +324,6 @@
     line-height:1.2 !important;
     font-weight:600 !important;
   }
-
-  html body.mobile-editor-redesign dialog#expenseModal #expDate,
-  html body.mobile-editor-redesign dialog#expenseModal #expTime,
-  html body.mobile-editor-redesign dialog#journalModal #jrDate,
-  html body.mobile-editor-redesign dialog#journalModal #jrTime,
   html body.mobile-ui dialog#expenseModal #expDate,
   html body.mobile-ui dialog#expenseModal #expTime,
   html body.mobile-ui dialog#journalModal #jrDate,
@@ -441,9 +346,6 @@
     direction:ltr !important;
     box-sizing:border-box !important;
   }
-
-  html body.mobile-editor-redesign dialog#expenseModal .expense-location-trigger,
-  html body.mobile-editor-redesign dialog#journalModal .journal-location-trigger,
   html body.mobile-ui dialog#expenseModal .expense-location-trigger,
   html body.mobile-ui dialog#journalModal .journal-location-trigger{
     width:100% !important;
@@ -464,18 +366,12 @@
     box-shadow:none !important;
     overflow:hidden !important;
   }
-
-  html body.mobile-editor-redesign dialog#expenseModal .expense-location-trigger .journal-location-trigger-label,
-  html body.mobile-editor-redesign dialog#journalModal .journal-location-trigger .journal-location-trigger-label,
   html body.mobile-ui dialog#expenseModal .expense-location-trigger .journal-location-trigger-label,
   html body.mobile-ui dialog#journalModal .journal-location-trigger .journal-location-trigger-label{
     display:inline !important;
     font-size:14px !important;
     line-height:1.2 !important;
   }
-
-  html body.mobile-editor-redesign dialog#expenseModal #expLocationPreview,
-  html body.mobile-editor-redesign dialog#journalModal #jrLocationPreview,
   html body.mobile-ui dialog#expenseModal #expLocationPreview,
   html body.mobile-ui dialog#journalModal #jrLocationPreview{
     display:block !important;
@@ -485,9 +381,6 @@
     white-space:normal !important;
     overflow-wrap:anywhere !important;
   }
-
-  html body.mobile-editor-redesign dialog#expenseModal > .footer,
-  html body.mobile-editor-redesign dialog#journalModal > .footer,
   html body.mobile-ui dialog#expenseModal > .footer,
   html body.mobile-ui dialog#journalModal > .footer{
     grid-row:3 !important;
@@ -500,9 +393,6 @@
     background:var(--card,#fff) !important;
     overflow:hidden !important;
   }
-
-  html body.mobile-editor-redesign dialog#expenseModal > .footer .btn,
-  html body.mobile-editor-redesign dialog#journalModal > .footer .btn,
   html body.mobile-ui dialog#expenseModal > .footer .btn,
   html body.mobile-ui dialog#journalModal > .footer .btn{
     width:100% !important;
@@ -515,24 +405,16 @@
     line-height:1 !important;
     white-space:nowrap !important;
   }
-
-  html body.mobile-editor-redesign dialog#expenseModal > .footer #expSave,
-  html body.mobile-editor-redesign dialog#journalModal > .footer #jrSave,
   html body.mobile-ui dialog#expenseModal > .footer #expSave,
   html body.mobile-ui dialog#journalModal > .footer #jrSave{
     grid-column:2 !important;
     grid-row:1 !important;
   }
-
-  html body.mobile-editor-redesign dialog#expenseModal > .footer #expCancel,
-  html body.mobile-editor-redesign dialog#journalModal > .footer #jrCancel,
   html body.mobile-ui dialog#expenseModal > .footer #expCancel,
   html body.mobile-ui dialog#journalModal > .footer #jrCancel{
     grid-column:1 !important;
     grid-row:1 !important;
   }
-
-  html body.mobile-editor-redesign dialog#expenseModal > .footer #expDelete,
   html body.mobile-ui dialog#expenseModal > .footer #expDelete{
     grid-column:1 / -1 !important;
     grid-row:2 !important;
@@ -19185,9 +19067,7 @@ html body .expenses-table tr.exp-item[data-kind="expense"]:not(.exp-details) .ex
 /* ABSOLUTE EOF: rebuilt mobile expense/journal editor. */
 @media (max-width: 820px){
   html body.mobile-ui dialog#expenseModal.modal[open],
-  html body.mobile-ui dialog#journalModal.modal[open],
-  html body.mobile-editor-redesign dialog#expenseModal.modal[open],
-  html body.mobile-editor-redesign dialog#journalModal.modal[open]{
+  html body.mobile-ui dialog#journalModal.modal[open]{
     position:fixed !important;
     inset:0 !important;
     width:100vw !important;
@@ -19207,9 +19087,7 @@ html body .expenses-table tr.exp-item[data-kind="expense"]:not(.exp-details) .ex
   }
 
   html body.mobile-ui dialog#expenseModal > .body,
-  html body.mobile-ui dialog#journalModal > .body,
-  html body.mobile-editor-redesign dialog#expenseModal > .body,
-  html body.mobile-editor-redesign dialog#journalModal > .body{
+  html body.mobile-ui dialog#journalModal > .body{
     display:flex !important;
     flex-direction:column !important;
     gap:12px !important;
@@ -19225,9 +19103,7 @@ html body .expenses-table tr.exp-item[data-kind="expense"]:not(.exp-details) .ex
   }
 
   html body.mobile-ui dialog#expenseModal #expText.input.rtf,
-  html body.mobile-ui dialog#journalModal #jrText.input.rtf,
-  html body.mobile-editor-redesign dialog#expenseModal #expText.input.rtf,
-  html body.mobile-editor-redesign dialog#journalModal #jrText.input.rtf{
+  html body.mobile-ui dialog#journalModal #jrText.input.rtf{
     display:block !important;
     width:100% !important;
     min-width:0 !important;
@@ -19248,9 +19124,7 @@ html body .expenses-table tr.exp-item[data-kind="expense"]:not(.exp-details) .ex
   }
 
   html body.mobile-ui dialog#expenseModal #rtfBubbleExp,
-  html body.mobile-ui dialog#journalModal #rtfBubble,
-  html body.mobile-editor-redesign dialog#expenseModal #rtfBubbleExp,
-  html body.mobile-editor-redesign dialog#journalModal #rtfBubble{
+  html body.mobile-ui dialog#journalModal #rtfBubble{
     position:static !important;
     transform:none !important;
     width:100% !important;
@@ -19264,9 +19138,7 @@ html body .expenses-table tr.exp-item[data-kind="expense"]:not(.exp-details) .ex
   }
 
   html body.mobile-ui dialog#expenseModal .expense-meta-row,
-  html body.mobile-ui dialog#journalModal .journal-meta-row,
-  html body.mobile-editor-redesign dialog#expenseModal .expense-meta-row,
-  html body.mobile-editor-redesign dialog#journalModal .journal-meta-row{
+  html body.mobile-ui dialog#journalModal .journal-meta-row{
     display:grid !important;
     grid-template-columns:minmax(0,1fr) minmax(88px,.5fr) !important;
     grid-template-areas:"date time" "location location" !important;
@@ -19279,24 +19151,16 @@ html body .expenses-table tr.exp-item[data-kind="expense"]:not(.exp-details) .ex
   }
 
   html body.mobile-ui dialog#expenseModal .expense-meta-row > .exp-date-col,
-  html body.mobile-ui dialog#journalModal .journal-meta-row > .jr-date-col,
-  html body.mobile-editor-redesign dialog#expenseModal .expense-meta-row > .exp-date-col,
-  html body.mobile-editor-redesign dialog#journalModal .journal-meta-row > .jr-date-col{ grid-area:date !important; }
+  html body.mobile-ui dialog#journalModal .journal-meta-row > .jr-date-col{ grid-area:date !important; }
 
   html body.mobile-ui dialog#expenseModal .expense-meta-row > .exp-time-col,
-  html body.mobile-ui dialog#journalModal .journal-meta-row > .jr-time-col,
-  html body.mobile-editor-redesign dialog#expenseModal .expense-meta-row > .exp-time-col,
-  html body.mobile-editor-redesign dialog#journalModal .journal-meta-row > .jr-time-col{ grid-area:time !important; }
+  html body.mobile-ui dialog#journalModal .journal-meta-row > .jr-time-col{ grid-area:time !important; }
 
   html body.mobile-ui dialog#expenseModal .expense-meta-row > .exp-location-col,
-  html body.mobile-ui dialog#journalModal .journal-meta-row > .jr-location-col,
-  html body.mobile-editor-redesign dialog#expenseModal .expense-meta-row > .exp-location-col,
-  html body.mobile-editor-redesign dialog#journalModal .journal-meta-row > .jr-location-col{ grid-area:location !important; }
+  html body.mobile-ui dialog#journalModal .journal-meta-row > .jr-location-col{ grid-area:location !important; }
 
   html body.mobile-ui dialog#expenseModal .expense-meta-row > *,
-  html body.mobile-ui dialog#journalModal .journal-meta-row > *,
-  html body.mobile-editor-redesign dialog#expenseModal .expense-meta-row > *,
-  html body.mobile-editor-redesign dialog#journalModal .journal-meta-row > *{
+  html body.mobile-ui dialog#journalModal .journal-meta-row > *{
     width:100% !important;
     min-width:0 !important;
     max-width:100% !important;
@@ -19311,13 +19175,7 @@ html body .expenses-table tr.exp-item[data-kind="expense"]:not(.exp-details) .ex
   html body.mobile-ui dialog#journalModal #jrDate,
   html body.mobile-ui dialog#journalModal #jrTime,
   html body.mobile-ui dialog#expenseModal .expense-location-trigger,
-  html body.mobile-ui dialog#journalModal .journal-location-trigger,
-  html body.mobile-editor-redesign dialog#expenseModal #expDate,
-  html body.mobile-editor-redesign dialog#expenseModal #expTime,
-  html body.mobile-editor-redesign dialog#journalModal #jrDate,
-  html body.mobile-editor-redesign dialog#journalModal #jrTime,
-  html body.mobile-editor-redesign dialog#expenseModal .expense-location-trigger,
-  html body.mobile-editor-redesign dialog#journalModal .journal-location-trigger{
+  html body.mobile-ui dialog#journalModal .journal-location-trigger{
     width:100% !important;
     min-width:0 !important;
     max-width:100% !important;
@@ -19330,40 +19188,27 @@ html body .expenses-table tr.exp-item[data-kind="expense"]:not(.exp-details) .ex
 /* ABSOLUTE EOF v2: readable mobile editor order and typography. */
 @media (max-width: 820px){
   html body.mobile-ui dialog#expenseModal > .body,
-  html body.mobile-ui dialog#journalModal > .body,
-  html body.mobile-editor-redesign dialog#expenseModal > .body,
-  html body.mobile-editor-redesign dialog#journalModal > .body{
+  html body.mobile-ui dialog#journalModal > .body{
     gap:10px !important;
     padding:10px 12px 18px !important;
   }
 
   html body.mobile-ui dialog#expenseModal > .body > label:has(#expTitle),
-  html body.mobile-editor-redesign dialog#expenseModal > .body > label:has(#expTitle),
-  html body.mobile-ui dialog#journalModal > .body > label:has(#jrTitle),
-  html body.mobile-editor-redesign dialog#journalModal > .body > label:has(#jrTitle){ order:1 !important; }
+  html body.mobile-ui dialog#journalModal > .body > label:has(#jrTitle){ order:1 !important; }
 
-  html body.mobile-ui dialog#expenseModal .expense-main-row,
-  html body.mobile-editor-redesign dialog#expenseModal .expense-main-row{ order:2 !important; }
+  html body.mobile-ui dialog#expenseModal .expense-main-row{ order:2 !important; }
 
   html body.mobile-ui dialog#expenseModal .expense-meta-row,
-  html body.mobile-editor-redesign dialog#expenseModal .expense-meta-row,
-  html body.mobile-ui dialog#journalModal .journal-meta-row,
-  html body.mobile-editor-redesign dialog#journalModal .journal-meta-row{ order:3 !important; }
+  html body.mobile-ui dialog#journalModal .journal-meta-row{ order:3 !important; }
 
   html body.mobile-ui dialog#expenseModal > .body > label:has(#expText),
-  html body.mobile-editor-redesign dialog#expenseModal > .body > label:has(#expText),
-  html body.mobile-ui dialog#journalModal > .body > label:has(#jrText),
-  html body.mobile-editor-redesign dialog#journalModal > .body > label:has(#jrText){ order:4 !important; }
+  html body.mobile-ui dialog#journalModal > .body > label:has(#jrText){ order:4 !important; }
 
   html body.mobile-ui dialog#expenseModal #rtfBubbleExp,
-  html body.mobile-editor-redesign dialog#expenseModal #rtfBubbleExp,
-  html body.mobile-ui dialog#journalModal #rtfBubble,
-  html body.mobile-editor-redesign dialog#journalModal #rtfBubble{ order:5 !important; }
+  html body.mobile-ui dialog#journalModal #rtfBubble{ order:5 !important; }
 
   html body.mobile-ui dialog#expenseModal > .body > label,
-  html body.mobile-ui dialog#journalModal > .body > label,
-  html body.mobile-editor-redesign dialog#expenseModal > .body > label,
-  html body.mobile-editor-redesign dialog#journalModal > .body > label{
+  html body.mobile-ui dialog#journalModal > .body > label{
     font-weight:400 !important;
   }
 
@@ -19371,19 +19216,12 @@ html body .expenses-table tr.exp-item[data-kind="expense"]:not(.exp-details) .ex
   html body.mobile-ui dialog#expenseModal select,
   html body.mobile-ui dialog#expenseModal button.input,
   html body.mobile-ui dialog#journalModal input,
-  html body.mobile-ui dialog#journalModal select,
-  html body.mobile-editor-redesign dialog#expenseModal input,
-  html body.mobile-editor-redesign dialog#expenseModal select,
-  html body.mobile-editor-redesign dialog#expenseModal button.input,
-  html body.mobile-editor-redesign dialog#journalModal input,
-  html body.mobile-editor-redesign dialog#journalModal select{
+  html body.mobile-ui dialog#journalModal select{
     font-weight:400 !important;
   }
 
   html body.mobile-ui dialog#expenseModal #expText.input.rtf,
-  html body.mobile-ui dialog#journalModal #jrText.input.rtf,
-  html body.mobile-editor-redesign dialog#expenseModal #expText.input.rtf,
-  html body.mobile-editor-redesign dialog#journalModal #jrText.input.rtf{
+  html body.mobile-ui dialog#journalModal #jrText.input.rtf{
     min-height:220px !important;
     padding:12px !important;
     font-size:16px !important;
@@ -19393,20 +19231,14 @@ html body .expenses-table tr.exp-item[data-kind="expense"]:not(.exp-details) .ex
   }
 
   html body.mobile-ui dialog#expenseModal #expText.input.rtf *,
-  html body.mobile-ui dialog#journalModal #jrText.input.rtf *,
-  html body.mobile-editor-redesign dialog#expenseModal #expText.input.rtf *,
-  html body.mobile-editor-redesign dialog#journalModal #jrText.input.rtf *{
+  html body.mobile-ui dialog#journalModal #jrText.input.rtf *{
     font-weight:inherit !important;
   }
 
   html body.mobile-ui dialog#expenseModal #expText.input.rtf b,
   html body.mobile-ui dialog#expenseModal #expText.input.rtf strong,
   html body.mobile-ui dialog#journalModal #jrText.input.rtf b,
-  html body.mobile-ui dialog#journalModal #jrText.input.rtf strong,
-  html body.mobile-editor-redesign dialog#expenseModal #expText.input.rtf b,
-  html body.mobile-editor-redesign dialog#expenseModal #expText.input.rtf strong,
-  html body.mobile-editor-redesign dialog#journalModal #jrText.input.rtf b,
-  html body.mobile-editor-redesign dialog#journalModal #jrText.input.rtf strong{
+  html body.mobile-ui dialog#journalModal #jrText.input.rtf strong{
     font-weight:700 !important;
   }
 }
