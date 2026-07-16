@@ -276,10 +276,6 @@ function wireReliableMobileButton(btn, handler, key='mobileReliableTap'){
 function wireReliableMobileActions(){
   if(!isMobileViewport()) return;
   wireReliableMobileButton(document.getElementById('accountMenuCancel'), ()=> closeAccountMenu(), 'accountMenuCancelReliable');
-  wireReliableMobileButton(document.getElementById('accountMenuLogout'), async (ev)=>{
-    closeAccountMenu();
-    await performPrimaryLogout(ev);
-  }, 'accountMenuLogoutReliable');
   wireReliableMobileButton(document.getElementById('tripTodayCancel'), ()=>{
     const dlg = document.getElementById('tripTodayModal');
     try{ dlg?.close(); }catch(_){ }
@@ -4174,7 +4170,6 @@ $('#lsReset').addEventListener('click', async ()=>{
 // ---- Mobile-safe auth wiring ----
 (function(){
   const $ = (sel)=>document.querySelector(sel);
-  const isMobileViewport = ()=> /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '') || window.innerWidth <= 820;
   async function doLogin(emailSel, passSel, errSel){
     const email = $(emailSel)?.value?.trim();
     const pass  = $(passSel)?.value;
@@ -4199,29 +4194,7 @@ $('#lsReset').addEventListener('click', async ()=>{
     }
   }
 
-  function bindTap(el, fn){
-    if(!el || el.dataset.mobileTapBound === '1') return;
-    el.dataset.mobileTapBound = '1';
-    let touchHandled = false;
-    el.addEventListener('touchend', (ev)=>{
-      touchHandled = true;
-      ev.preventDefault();
-      ev.stopPropagation();
-      fn();
-      setTimeout(()=>{ touchHandled = false; }, 350);
-    }, { passive:false });
-    el.addEventListener('click', (ev)=>{
-      if(touchHandled){
-        ev.preventDefault();
-        ev.stopPropagation();
-        return;
-      }
-      fn();
-    });
-  }
-
-  bindTap($('#loginBtn'), ()=>doLogin('#lsEmail', '#lsPass', '#lsError'));
-  bindTap($('#authSignIn'), ()=>doLogin('#authEmail', '#authPass', '#authError'));
+  bindTap($('#loginBtn'), ()=>doLogin('#lsEmail', '#lsPass', '#lsError'), 'lsLoginTapWired');
 
   ['#lsEmail', '#lsPass'].forEach((sel)=>{
     const el = $(sel);
@@ -4234,8 +4207,6 @@ $('#lsReset').addEventListener('click', async ()=>{
       }
     });
   });
-
-  window.__isMobileViewport = isMobileViewport;
 })();
 
 
@@ -6987,7 +6958,7 @@ async function loginWithCredentials(emailSel='#authEmail', passSel='#authPass', 
     await FB.signInWithEmailAndPassword(FB.auth, email, pass);
     const e = document.querySelector(errSel); if(e) e.textContent = '';
   }catch(err){
-    const e = document.querySelector('#authError'); if(e) e.textContent = (err?.code || err?.message || 'שגיאת התחברות');
+    const e = document.querySelector(errSel); if(e) e.textContent = xErr(err);
     showMobileAuthDebug(err);
     console.error('login failed', err);
   }finally{
@@ -6999,6 +6970,64 @@ document.addEventListener('click', (ev)=>{
   if(!t) return;
   if(t.matches('#authPrimary')){ loginWithCredentials(); }
 });
+
+// ---- authModal: tab switching + signup/reset wiring ----
+(function(){
+  const modal = document.getElementById('authModal');
+  if(!modal) return;
+  const tabBtns = modal.querySelectorAll('.tabs .tab-btn');
+  const panels = {
+    loginTab: document.getElementById('loginTab'),
+    signupTab: document.getElementById('signupTab'),
+    resetTab: document.getElementById('resetTab')
+  };
+  const primaryBtn = document.getElementById('authPrimary');
+  const primaryLabels = { loginTab: 'כניסה', signupTab: 'הרשמה', resetTab: 'שלח מייל איפוס' };
+
+  function activeAuthTab(){
+    return modal.querySelector('.tabs .tab-btn.active')?.dataset.tab || 'loginTab';
+  }
+
+  function switchAuthTab(tab){
+    tabBtns.forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+    Object.entries(panels).forEach(([id, el]) => { if(el) el.hidden = (id !== tab); });
+    if(primaryBtn) primaryBtn.textContent = primaryLabels[tab] || 'כניסה';
+  }
+
+  tabBtns.forEach(btn => btn.addEventListener('click', ()=> switchAuthTab(btn.dataset.tab)));
+  modal.addEventListener('close', ()=> switchAuthTab('loginTab'));
+
+  async function doSignup(){
+    const email = document.getElementById('suEmail')?.value?.trim();
+    const pass = document.getElementById('suPass')?.value;
+    const errEl = document.getElementById('suError');
+    if(errEl) errEl.textContent = '';
+    if(!email || !pass){ if(errEl) errEl.textContent = 'נא מלא אימייל וסיסמה'; return; }
+    try{
+      await FB.createUserWithEmailAndPassword(FB.auth, email, pass);
+    }catch(e){ if(errEl) errEl.textContent = xErr(e); showMobileAuthDebug(e); }
+  }
+
+  async function doReset(){
+    const email = document.getElementById('rsEmail')?.value?.trim();
+    const infoEl = document.getElementById('rsInfo');
+    if(infoEl) infoEl.textContent = '';
+    if(!email){ if(infoEl) infoEl.textContent = 'נא מלא אימייל'; return; }
+    try{
+      await FB.sendPasswordResetEmail(FB.auth, email);
+      infoEl && (infoEl.textContent = 'נשלח מייל לאיפוס');
+    }catch(e){ if(infoEl) infoEl.textContent = xErr(e); showMobileAuthDebug(e); }
+  }
+
+  if(primaryBtn){
+    primaryBtn.addEventListener('click', (ev)=>{
+      const tab = activeAuthTab();
+      if(tab === 'signupTab'){ ev.preventDefault(); ev.stopPropagation(); doSignup(); }
+      else if(tab === 'resetTab'){ ev.preventDefault(); ev.stopPropagation(); doReset(); }
+      // loginTab: let the click bubble to the existing document-level #authPrimary handler above
+    });
+  }
+})();
 
 // ===== Auth UI helpers (final) =====
 // Toggle app/login screens on auth state change + start subscriptions
@@ -10194,18 +10223,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
 
 // --- Auth Fallback (Fixed for reliable login) ---
 (function(){
-  const isMobile = () => /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth <= 820;
   function $q(s){ return document.querySelector(s); }
-  function on(el, ev, fn){ el && el.addEventListener(ev, fn, {passive:false}); }
-  function bindTap(el, fn){
-    if(!el) return;
-    let locked = false;
-    const wrap = async (e)=>{ if(locked) return; locked=true; try{ e?.preventDefault?.(); e?.stopPropagation?.(); await fn(e);} finally{ locked=false; } };
-    on(el, 'click', wrap);
-    on(el, 'touchend', wrap);
-  }
-  function show(el){ el && (el.style.display='flex'); }
-  function hide(el){ el && (el.style.display='none'); }
   function setErr(msg){ const e = $q('#mError'); if(e) e.textContent = msg||''; }
 
   async function doLogin(){
@@ -10223,17 +10241,14 @@ document.addEventListener('DOMContentLoaded', ()=>{
       setErr('');
     }catch(err){
       console.error('Mobile fallback login error:', err);
-      setErr('שגיאה בהתחברות: ' + (err?.message||err));
+      setErr(xErr(err));
     }
   }
 
   async function doLogout(){
     setErr('מתנתק...');
     try{
-      if(typeof window.hardSignOut === 'function') await window.hardSignOut();
-      else if(window.FB?.signOut && (window.auth||window.FB?.auth)) await window.FB.signOut(window.auth||window.FB.auth);
-      setErr('נותק.');
-      setTimeout(()=>setErr(''), 600);
+      await performPrimaryLogout();
     }catch(err){
       console.error('Mobile fallback logout error:', err);
       setErr('שגיאה בהתנתקות');
@@ -10243,8 +10258,8 @@ document.addEventListener('DOMContentLoaded', ()=>{
   function wire(){
     const overlay = document.getElementById('mobileAuthOverlay');
     if(!overlay) return;
-    bindTap(document.getElementById('mLogin'), doLogin);
-    bindTap(document.getElementById('mLogout'), doLogout);
+    bindTap(document.getElementById('mLogin'), doLogin, 'mLoginTapWired');
+    bindTap(document.getElementById('mLogout'), doLogout, 'mLogoutTapWired');
     const email = document.getElementById('mEmail');
     const pass  = document.getElementById('mPass');
     if(email && pass){
