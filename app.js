@@ -2083,18 +2083,6 @@ function _displayNameCityCountry(raw){
   const parts=t.split(/\s*,\s*|\s*-\s*|\s*\|\s*/).map(s=>s.trim()).filter(Boolean);
   return parts.slice(0,3).join(', ');
 }
-function placeLinkHtml(e){
-  const raw = e && e.locationName;
-  if(!raw) return '';
-  const name=_displayNameCityCountry(raw);
-  let href=null;
-  if(e && typeof e.lat==='number' && typeof e.lng==='number' && isFinite(e.lat) && isFinite(e.lng)){
-    // FIX: Added missing backtick after the 0
-    href=`https://maps.google.com/?q=${e.lat},${e.lng}`;
-  }else if(_isUrl(raw)){ href=raw.trim(); }
-  if(href){ return `<a href="${encodeURI(href)}" target="_blank" rel="noopener">${esc(name||raw)}</a>`; }
-  return esc(name||raw);
-}
 // === End helpers ===
 function formatInt(n){
   n = Math.floor(Number(n)||0);
@@ -2348,16 +2336,6 @@ function shouldUseLightTripLoading(){
     return localStorage.getItem('flymily_light_trip_loading') === '1';
   }catch(_){
     return true;
-  }
-}
-
-function latestTripFromList(trips){
-  try{
-    return [...(trips || [])]
-      .filter(t => t?.id)
-      .sort((a,b)=> (b.start || b.createdAt || '').localeCompare(a.start || a.createdAt || ''))[0] || null;
-  }catch(_){
-    return null;
   }
 }
 
@@ -3066,21 +3044,6 @@ const currencyDefaultCityMap = {
   AUD: 'קנברה'
 };
 
-function guessDestinationCity(t){
-  try{
-    const raw = (t && t.destination) ? String(t.destination).trim() : '';
-    if(raw){
-      // If user typed something like "Bansko, Bulgaria" or "Bansko - Bulgaria" -> take first segment
-      const parts = raw.split(/\s*,\s*|\s*-\s*|\s*\|\s*/).map(s=>s.trim()).filter(Boolean);
-      if(parts.length >= 2) return parts[0];
-    }
-    const cur = (t && (t.localCurrency || getLocalCurrency(t.destination))) || null;
-    if(cur && currencyDefaultCityMap[cur]) return currencyDefaultCityMap[cur];
-  }catch(_){ }
-  return '';
-}
-
-
 // Enrich legacy expenses: fill missing title/locationName from coords or first line of description (best-effort)
 async function enrichLegacyExpenses(trip){
   try{
@@ -3280,20 +3243,6 @@ function _todayKey(){
   const pad = n=>String(n).padStart(2,'0');
   return `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
 }
-function _isTodayWithinTripDates(startYMD, endYMD){
-  const s = _parseISODateOnly(startYMD);
-  const e = _parseISODateOnly(endYMD);
-  if(!s || !e) return false;
-  const t = _parseISODateOnly(_todayKey());
-  if(!t) return false;
-  const a = s.getTime();
-  const b = e.getTime();
-  const x = t.getTime();
-  const lo = Math.min(a,b);
-  const hi = Math.max(a,b);
-  return x >= lo && x <= hi;
-}
-
 function maybeShowTripTodayPrompt(trip, opts){
   // Active trips open directly to the main trip screen; no quick-add prompt.
   return;
@@ -3827,7 +3776,9 @@ $('#btnBudgetEdit').addEventListener('click', async ()=>{
   state.isDirty = false; // Reset dirty state on save
 });
 // Expenses CRUD
-$('#btnAddExpense').addEventListener('click', ()=> openExpenseModal());
+// Mobile gets its own reliable-tap binding (wireReliableMobileActions); binding
+// both here would fire openExpenseModal() twice per tap on mobile.
+if(!isMobileViewport()) $('#btnAddExpense').addEventListener('click', ()=> openExpenseModal());
 $('#expCancel').addEventListener('click', ()=> $('#expenseModal').close());
 $('#expSave').addEventListener('click', saveExpense);
 
@@ -4042,7 +3993,8 @@ $('#expLocationName').value = e?.locationName || '';
     if($d) $d.value=dStr; if($t) $t.value=tStr;
   } catch(_){}
 
-  document.dispatchEvent(new Event('openExpenseModal')); $('#expenseModal').showModal();
+  document.dispatchEvent(new Event('openExpenseModal'));
+  { const __dlg = $('#expenseModal'); if(!__dlg.open) __dlg.showModal(); }
   try{
     // Quick-entry: jump straight to the amount field on a new expense so the very
     // next keystroke is the number - one less tap while on an active trip.
@@ -5547,94 +5499,6 @@ function isProbablyAmountTitle(title, exp){
   if(a===0 && Math.abs(n) <= eps) return true;
   return false;
 }
-function deriveTitleCandidateIgnoringStoredTitle(exp, trip){
-  const loc = (exp?.locationName||'').toString().trim();
-  if(loc) return loc.split(',')[0].trim();
-  const d1 = firstNonEmptyLine(exp?.desc || '');
-  if(d1) return d1;
-  try{
-    const raw = (exp?.descHtml || '').toString();
-    if(raw){
-      const asText = raw
-        .replace(/<br\s*\/?>/gi, '\n')
-        .replace(/<\/p>/gi, '\n')
-        .replace(/<[^>]+>/g, ' ')
-        .replace(/&nbsp;/gi, ' ')
-        .replace(/&amp;/gi, '&')
-        .replace(/&lt;/gi, '<')
-        .replace(/&gt;/gi, '>')
-        .replace(/\s+/g, ' ')
-        .trim();
-      const d2 = firstNonEmptyLine(asText);
-      if(d2) return d2;
-    }
-  }catch(_){}
-  const dest = (trip?.destination||'').toString().trim();
-  if(dest.includes(',')) return dest.split(',')[0].trim();
-  return '';
-}
-
-
-function migrateBadExpenseTitles(trip){
-  // guard: run once per loaded trip to avoid repeated writes
-  if(!state || !state.currentTripId) return;
-  if(state._migratedBadTitlesTripId === state.currentTripId) return;
-
-  const expenses = trip?.expenses || {};
-  let changed = false;
-
-  for(const [id, exp] of Object.entries(expenses)){
-    const curTitle = (exp?.title||'').toString().trim();
-    if(curTitle && isProbablyAmountTitle(curTitle, exp)){
-      const newTitle = deriveTitleCandidateIgnoringStoredTitle(exp, trip).toString().trim();
-      if(newTitle && newTitle !== curTitle){
-        expenses[id] = {...exp, title: newTitle};
-        changed = true;
-      } else if(!newTitle) {
-        // blank it so UI falls back cleanly
-        expenses[id] = {...exp, title: ''};
-        changed = true;
-      }
-    }
-  }
-
-  state._migratedBadTitlesTripId = state.currentTripId;
-
-  if(changed){
-    try{
-      const ref = FB.doc(db,'trips', state.currentTripId);
-      FB.updateDoc(ref, { expenses });
-    }catch(_){}
-  }
-}
-
-function deriveTitleCandidate(exp, trip){
-  const t0 = (exp?.title||'').toString().trim();
-  if(t0 && !isProbablyAmountTitle(t0, exp)) return t0;
-  const loc = (exp?.locationName||'').toString().trim();
-  if(loc) return _cleanPlaceLabel(loc.split(',')[0].trim());
-  const d1 = firstNonEmptyLine(exp?.desc || '');
-  if(d1) return d1;
-  // Do NOT fall back to country-only destination (e.g., "Thailand")
-  const dest = (trip?.destination||'').toString().trim();
-  if(dest.includes(',')) return dest.split(',')[0].trim();
-  return '';
-}
-function buildMapHref(exp){
-  try{
-    const lat = (exp?.lat!=null) ? Number(exp.lat) : null;
-    const lng = (exp?.lng!=null) ? Number(exp.lng) : null;
-    if(Number.isFinite(lat) && Number.isFinite(lng)){
-      const z = 16;
-      return `https://www.openstreetmap.org/?mlat=${encodeURIComponent(lat)}&mlon=${encodeURIComponent(lng)}#map=${z}/${encodeURIComponent(lat)}/${encodeURIComponent(lng)}`;
-    }
-    const q = (exp?.locationName||'').toString().trim();
-    if(q){
-      return `https://www.openstreetmap.org/search?query=${encodeURIComponent(q)}`;
-    }
-    return '';
-  }catch(_){ return ''; }
-}
 
 // Map modal functionality for both expenses and journal
 function openMapSelectModal(lat, lng) {
@@ -6158,7 +6022,6 @@ document.addEventListener('click', (ev) => {
 
 // helper to get safe current trip or fallback
 function currentTrip(){ return state?.current || {}; }
-function asArray(o){ return Array.isArray(o)? o : (o? Object.values(o): []); }
 
 // Build a minimal HTML block for export (RTL + Hebrew-safe)
 // Load html2canvas for Hebrew-safe PDF (render as image)
@@ -6168,42 +6031,6 @@ async function ensureHtml2Canvas(){
     "https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js",
     "https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"
   ]);
-}
-
-// Format helpers for meta
-function kvRowsFromMeta(trip){
-  const rows = [];
-  const listText = (value)=>{
-    if(Array.isArray(value)) return value.map(v => String(v || '').trim()).filter(Boolean).join(', ');
-    return String(value || '').trim();
-  };
-  const safeTrip = trip || {};
-  rows.push({ שדה:'יעד', ערך: esc(safeTrip.destination||'') });
-  rows.push({ שדה:'תאריכים', ערך: `${fmtDate(safeTrip.start)} - ${fmtDate(safeTrip.end)}` });
-  const people = listText(safeTrip.people);
-  const types = listText(safeTrip.types);
-  if (people) rows.push({ שדה:'משתתפים', ערך: esc(people) });
-  if (types) rows.push({ שדה:'סוג טיול', ערך: esc(types) });
-  // Budget (flatten one level)
-  if (safeTrip.budget && typeof safeTrip.budget === 'object'){
-    const pairs = [];
-    if (Number(safeTrip.budget.USD) > 0) pairs.push(`USD: ${formatInt(safeTrip.budget.USD)}`);
-    if (Number(safeTrip.budget.EUR) > 0) pairs.push(`EUR: ${formatInt(safeTrip.budget.EUR)}`);
-    if (Number(safeTrip.budget.ILS) > 0) pairs.push(`ILS: ${formatInt(safeTrip.budget.ILS)}`);
-    if (pairs.length) rows.push({ שדה:'תקציב', ערך: pairs.join(' | ') });
-  }
-  // Rates
-  if (safeTrip.rates && typeof safeTrip.rates === 'object'){
-    const parts = [];
-    if (safeTrip.rates.USDILS) parts.push(`USDILS: ${safeTrip.rates.USDILS}`);
-    if (safeTrip.rates.USDEUR) parts.push(`USDEUR: ${safeTrip.rates.USDEUR}`);
-    if (safeTrip.rates.USDLocal) parts.push(`USDLocal: ${safeTrip.rates.USDLocal}`);
-    if (safeTrip.rates.lockedAt) {
-      try{ parts.push(`lockedAt: ${dayjs(safeTrip.rates.lockedAt).format('YYYY-MM-DD HH:mm')}`); }catch(_){}
-    }
-    if (parts.length) rows.push({ שדה:'שערי מטבע', ערך: parts.join(' | ') });
-  }
-  return rows;
 }
 
 // override PDF to always include all sections
@@ -6525,10 +6352,6 @@ async function exportExcel(){
 }
 
 // override Word - full RTL trip report with TOC
-function wordText(value){
-  return excelCellText(value ?? '').replace(/\s+/g, ' ').trim();
-}
-
 function wordDateValue(item){
   return item?.dateIso || item?.date || item?.createdAt || item?.updatedAt || '';
 }
@@ -6544,10 +6367,6 @@ function wordSafeFilePart(value){
     .replace(/[\\/:*?"<>|]+/g, '_')
     .replace(/\s+/g, '_')
     .slice(0, 80) || 'trip';
-}
-
-function wordPlainHtml(value){
-  return excelHtmlEscape(stripLinks(excelCellText(value ?? '')));
 }
 
 function wordPlain(value){
@@ -7151,6 +6970,7 @@ function clearMarks(root){
       const t = document.createTextNode(m.textContent);
       m.replaceWith(t);
     });
+    root.normalize();
   }catch(e){ /* ignore */ }
 }
 
@@ -7268,27 +7088,6 @@ window.searchAndNavigate = searchAndNavigate;
 
 // --- Utils: linkify plain text into clickable <a> tags (http/https + www + emails) ---
 
-function normalizeEditorLinks(editor){
-  if(!editor) return;
-  editor.querySelectorAll('a').forEach(a=>{
-    try{
-      const href = a.getAttribute('href')||'';
-      const txt = (a.textContent||'').trim();
-      const looksRaw = (txt === href) || /^https?:\/\//.test(txt);
-      const tooLong = txt.length > 40 || href.length > 60;
-      if (looksRaw || tooLong){
-        a.classList.add('link-icon');
-        a.textContent = '';
-        a.style.display = 'inline-flex';
-      } else {
-        a.style.display = 'inline';
-      }
-      a.setAttribute('target','_blank');
-      a.setAttribute('rel','noopener');
-    }catch(_){}
-  });
-}
-
 function bindEditorResizeHandles(){
   try{
     if(window.__editorResizeHandlesBound) return;
@@ -7336,19 +7135,6 @@ function bindEditorResizeHandles(){
 }
 
 bindEditorResizeHandles();
-
-function pasteAsIconLink(editor, url){
-  const a = document.createElement('a');
-  a.href = url;
-  a.className = 'link-icon';
-  a.textContent = '';
-  a.style.display = 'inline-flex';
-  a.target = '_blank';
-  a.rel = 'noopener';
-  const sel = window.getSelection();
-  if(sel && sel.rangeCount){ sel.getRangeAt(0).deleteContents(); sel.getRangeAt(0).insertNode(a); }
-}
-
 
 // --- Added: sanitizeExpenseNoLinks ---
 // Keeps simple formatting (b/i/u, lists, line breaks, colored spans) and strips links & unsafe attributes.
@@ -7435,37 +7221,6 @@ function sanitizeExpenseNoLinks(html){
     return tmp.innerHTML;
   }catch(_){ return (html||''); }
 }
-function sanitizeJournalHTML(html){
-  // Convert to DOM, post-process anchors
-  const tmp = document.createElement('div');
-  tmp.innerHTML = html;
-  
-  tmp.querySelectorAll('a').forEach(a=>{
-    try{
-      const href = a.getAttribute('href')||'';
-      a.setAttribute('target','_blank');
-      a.setAttribute('rel','noopener');
-
-      const txt = (a.textContent||'').trim();
-      const looksRaw = (txt === href) || /^https?:\/\//.test(txt);
-      const tooLong = txt.length > 40 || href.length > 60;
-
-      // If long/raw, render as a blue link icon only
-      if (looksRaw || tooLong){
-        a.classList.add('link-icon');
-        a.textContent = '';
-        a.style.display = 'inline-flex'; // icon only
-        return;
-      }
-
-      // Otherwise keep user label but ensure anchors remain inline
-      a.style.display = 'inline';
-    }catch(_){}
-  });
-
-  return tmp.innerHTML;
-}
-
 function linkifyText(str, label){
   if (!str) return '';
   const escMap = {'&':'&','<':'<','>':'>','"':'"','\'':'\''};
@@ -7557,23 +7312,6 @@ function enableLinkRemoval(container){
 
 
 
-// --- Normalize place display: "name, city, country" ---
-function formatPlace(raw){
-  if (!raw) return '';
-  const parts = String(raw).split(',').map(s=>s.trim()).filter(Boolean);
-  // remove pure house numbers / postal codes
-  const cleaned = parts.filter(p=>!/^\d+[A-Za-z-]*$/.test(p));
-  if (cleaned.length === 0) return raw;
-  const country = cleaned[cleaned.length-1];
-  const cityOrRegion = cleaned.length>=2 ? cleaned[cleaned.length-2] : '';
-  const name = cleaned[0];
-  // Avoid duplication if name equals city
-  const arr = [name];
-  if (cityOrRegion && cityOrRegion.toLowerCase() !== name.toLowerCase()) arr.push(cityOrRegion);
-  if (country && country.toLowerCase() !== cityOrRegion.toLowerCase()) arr.push(country);
-  return arr.join(', ');
-}
-
 
 
 /** Safe stub: expense summary bar is currently removed from DOM.
@@ -7657,6 +7395,15 @@ function __normalizeImportedText(text){
   return __textQualityScore(repaired) > __textQualityScore(src) ? repaired : src;
 }
 
+// Shared by the GPX importers below (points + track): read a namespaced
+// child tag's text, falling back to the non-namespaced tag name.
+function getTag(el, name, ns){
+  if (!el) return '';
+  let t = el.getElementsByTagNameNS(ns, name)[0];
+  if (!t) t = el.getElementsByTagName(name)[0]; // Fallback
+  return t ? __normalizeImportedText(t.textContent || '') : '';
+}
+
 async function __readXmlFileText(file){
   const bytes = new Uint8Array(await file.arrayBuffer());
   const decoders = [];
@@ -7720,13 +7467,6 @@ importGPXFromFile = async function(file, opts={}){
     const points = [];
 
     // --- פונקציית עזר מתוקנת v2 ---
-    function getTag(el, name){
-      if (!el) return '';
-      let t = el.getElementsByTagNameNS(gpxNamespace, name)[0];
-      if (!t) t = el.getElementsByTagName(name)[0]; // Fallback
-      return t ? __normalizeImportedText(t.textContent || '') : '';
-    }
-    // --- פונקציית עזר מתוקנת v2 ---
     function getExt(el, name){
       let exts = el.getElementsByTagNameNS(gpxNamespace, 'extensions')[0];
       if (!exts) exts = el.getElementsByTagName('extensions')[0];
@@ -7744,9 +7484,9 @@ importGPXFromFile = async function(file, opts={}){
       if(Number.isFinite(lat) && Number.isFinite(lng)){
         points.push({
           lat, lng,
-          _name: getTag(el,'name') || 'נקודה',
-          _desc: getTag(el,'desc'),
-          _time: getTag(el,'time'),
+          _name: getTag(el,'name',gpxNamespace) || 'נקודה',
+          _desc: getTag(el,'desc',gpxNamespace),
+          _time: getTag(el,'time',gpxNamespace),
           _source: getExt(el,'source') || 'journal'
         });
       }
@@ -7834,14 +7574,6 @@ importGPXAsTrek = async function(file, opts){
 
     if(path.length < 2){ if(typeof toast==='function') toast('לא נמצא מסלול (לפחות 2 נקודות) בקובץ'); return; }
 
-    // --- פונקציית עזר מתוקנת v2 ---
-    function getTag(el, name){
-      if (!el) return '';
-      let t = el.getElementsByTagNameNS(gpxNamespace, name)[0];
-      if (!t) t = el.getElementsByTagName(name)[0]; // Fallback
-      return t ? __normalizeImportedText(t.textContent || '') : '';
-    }
-
     // נתוני נקודות קצה ושם
     const firstPtEl = trkpts[0];
     const lastPtEl = trkpts[trkpts.length - 1];
@@ -7856,7 +7588,7 @@ importGPXAsTrek = async function(file, opts){
     const trackName = __normalizeImportedText(trackNameEl?.textContent || 'מסלול GPX');
     
     // --- שליפת זמן מתוקנת v2 ---
-    const startTime = getTag(firstPtEl, 'time') || new Date().toISOString();
+    const startTime = getTag(firstPtEl, 'time', gpxNamespace) || new Date().toISOString();
 
     // (rest of the function is the same)
     const ref = FB.doc(db, 'trips', state.currentTripId);
@@ -8118,10 +7850,6 @@ document.addEventListener('DOMContentLoaded', ()=>{
 });
 
 window.getEmailSpan = function(){ return document.getElementById('currentUserEmail'); };
-
-
-function safeHide(el){ if(el){ el.hidden = true; } }
-function safeShow(el){ if(el){ el.hidden = false; } }
 
 
 // === SAFE OVERRIDES: maps (placed at end to override corrupted earlier versions) ===
@@ -8697,24 +8425,6 @@ function renderCategoryBreakdownNode(targetId){
       if(tries>20) clearInterval(iv); // try ~20 times (~20s)
     }, 1000);
   });
-})();
-
-// === Hard bind for Overview "פילוח" button (guards against layout refactors) ===
-// Some UI refactors moved the button into tab chrome; use capture delegation so it always works.
-(function(){
-  function handler(e){
-    const btn = e.target && (e.target.closest ? e.target.closest('#btnQuickBreakdown') : null);
-    if(!btn) return;
-    e.preventDefault();
-    e.stopPropagation();
-    if (typeof window.__openBreakdownDialog === 'function'){
-      window.__openBreakdownDialog(true);
-      return;
-    }
-    const dlgBtn = document.getElementById('openBreakdownBtn');
-    if(dlgBtn) dlgBtn.click();
-  }
-  document.addEventListener('click', handler, true);
 })();
 
 // === Print Preview (Trip Schedule) ===
@@ -9956,15 +9666,6 @@ document.addEventListener('DOMContentLoaded', ()=>{
     }
   }
 
-  function clearMarks(root){
-    const marks = root.querySelectorAll('mark');
-    marks.forEach(m=>{
-      const txt = document.createTextNode(m.textContent);
-      m.replaceWith(txt);
-    });
-    // merge adjacent text nodes
-    root.normalize();
-  }
 
   // highlight within text nodes (does not rewrite innerHTML; preserves listeners)
   function highlightMatches(root, regex){
@@ -10175,10 +9876,13 @@ document.addEventListener('DOMContentLoaded', ()=>{
     // Quick actions (keep existing functionality; just expose entry points from "הצג הכל")
     const qAddExpense = document.getElementById('btnQuickAddExpense');
     const qAddJournal = document.getElementById('btnQuickAddJournal');
-    const qBreakdown = document.getElementById('btnQuickBreakdown');
 
     qAddExpense?.addEventListener('click', ()=>{
-      // Prefer existing handler button if present
+      // On mobile, #btnQuickAddExpense already has its own direct handler
+      // (wireReliableMobileActions); proxying to #btnAddExpense.click() here
+      // too would fire openExpenseModal() twice. Desktop has no such direct
+      // handler, so it needs this proxy.
+      if (isMobileViewport()) return;
       const btn = document.getElementById('btnAddExpense');
       if (btn) btn.click();
     });
@@ -10186,16 +9890,6 @@ document.addEventListener('DOMContentLoaded', ()=>{
       const btn = document.getElementById('btnAddJournal');
       if (btn) btn.click();
     });
-    qBreakdown?.addEventListener('click', ()=>{
-      // Do NOT proxy through a hidden button (programmatic click may lose the user-gesture context)
-      if (typeof window.__openBreakdownDialog === 'function'){
-        window.__openBreakdownDialog();
-        return;
-      }
-      const btn = document.getElementById('openBreakdownBtn');
-      if (btn) btn.click();
-    });
-
     toggle.addEventListener('click', ()=>{
       const root = document.getElementById('view-overview');
       const collapsed = root.classList.contains('all-collapsed');
