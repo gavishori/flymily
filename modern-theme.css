@@ -246,3 +246,18 @@ nav.tabs [aria-selected="true"], nav.tabs .active{
   background: color-mix(in oklab, var(--muted) 20%, transparent);
   color: var(--muted);
 }
+
+/* ---------- Guarantee full-width expense/journal note content ----------
+   The expanded note row (td.notes > .expense-detail-surface) has ~20
+   overlapping width:100% rules across style.css for different states
+   (all-collapsed, force-open, per-view variants); this is a final,
+   maximum-specificity safety net so it's never narrower than the row
+   regardless of which state/selector combination is active. */
+html body td.notes,
+html body td.notes .expense-detail-surface,
+html body .expense-detail-surface{
+  display: block !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
