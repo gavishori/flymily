@@ -2829,6 +2829,13 @@ async function renderTripList(){
   }
   if(state.tripStatusFilter && state.tripStatusFilter !== 'all'){
     items = items.filter(t => getTripStatus(t) === state.tripStatusFilter);
+    if(state.tripStatusFilter === 'past'){
+      // Only the single most-recently-ended trip, not every past trip.
+      items = items
+        .slice()
+        .sort((a,b)=> (b.end||b.start||'').localeCompare(a.end||a.start||''))
+        .slice(0, 1);
+    }
   }
   state._tripListRenderToken = (state._tripListRenderToken || 0) + 1;
   const renderToken = state._tripListRenderToken;
@@ -2898,11 +2905,15 @@ async function renderTripList(){
 // dates are missing/ambiguous). Reuses the same date-only comparison already
 // used by the mobile "active trip window" logic (isTripInMobileActiveWindow).
 function getTripStatus(trip){
-  const today = _parseISODateOnly(_todayKey());
-  const start = _parseISODateOnly(trip?.start);
-  const end = _parseISODateOnly(trip?.end);
-  if(end && today && end.getTime() < today.getTime()) return 'past';
-  if(start && today && start.getTime() > today.getTime()) return 'upcoming';
+  // Uses dayjs (already loaded app-wide, same as fmtDate()) rather than the
+  // stricter _parseISODateOnly, since some trips (e.g. imported/legacy ones)
+  // don't store start/end as plain "YYYY-MM-DD" strings - dayjs parses
+  // whatever fmtDate() already successfully displays for these trips.
+  const today = dayjs().startOf('day');
+  const start = trip?.start ? dayjs(trip.start).startOf('day') : null;
+  const end = trip?.end ? dayjs(trip.end).startOf('day') : null;
+  if(end && end.isValid() && end.isBefore(today)) return 'past';
+  if(start && start.isValid() && start.isAfter(today)) return 'upcoming';
   return 'active';
 }
 function tripStatusPill(t){
