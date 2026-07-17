@@ -2426,6 +2426,11 @@ let __autoOpenLatestTripId = null;
 
 function shouldUseLightTripLoading(){
   try{
+    // Once the user explicitly picks a trip-status filter (all/upcoming/past),
+    // they want the real matching list, not just "what's active now" - stop
+    // restricting to a single trip everywhere this is checked (both the
+    // Firestore subscription that populates state.trips and the render step).
+    if(state.tripStatusFilterTouched) return false;
     if(isMobileViewport()) return true;
     return localStorage.getItem('flymily_light_trip_loading') === '1';
   }catch(_){
@@ -2805,11 +2810,10 @@ async function renderTripList(){
   const search = $('#searchTrips').value?.trim();
   let items = [...state.trips];
   let s = null;
-  // The mobile "light loading" shortcut (show only the single currently-active
-  // trip) is a default-view convenience, not a hard limit - once the user
-  // explicitly picks a status filter (all/upcoming/past) they want to see the
-  // matching trips, not just "what's active now".
-  if(shouldUseLightTripLoading() && !search && !state.tripStatusFilterTouched){
+  // shouldUseLightTripLoading() itself accounts for state.tripStatusFilterTouched
+  // (see its definition) so this naturally stops restricting to a single trip
+  // once the user explicitly picks a status filter.
+  if(shouldUseLightTripLoading() && !search){
     items = getMobileActiveTrips(items).slice(0, 1);
   }
   if(search){
@@ -3863,9 +3867,17 @@ $('#btnViewMap').addEventListener('click', ()=>{ if(state.viewMode !== 'map') st
 
 document.querySelectorAll('#tripStatusActions [data-status]').forEach(btn=>{
   btn.addEventListener('click', ()=>{
+    const wasAlreadyTouched = state.tripStatusFilterTouched;
     state.tripStatusFilter = btn.dataset.status;
     state.tripStatusFilterTouched = true;
     document.querySelectorAll('#tripStatusActions [data-status]').forEach(b=> b.classList.toggle('active', b===btn));
+    // state.trips itself (not just the render step) is limited to a single
+    // "active" trip on mobile by the Firestore subscription in subscribeTrips().
+    // The first time a status filter is touched, re-subscribe so it re-checks
+    // shouldUseLightTripLoading() (now false) and actually loads every trip.
+    if(!wasAlreadyTouched && typeof subscribeTrips === 'function' && state.user?.uid){
+      try{ subscribeTrips(); return; }catch(_){ }
+    }
     renderTripList();
   });
 });
