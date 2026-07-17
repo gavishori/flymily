@@ -222,3 +222,27 @@ nav.tabs [aria-selected="true"], nav.tabs .active{
 .tab-select-wrap[data-tab="overview"]{ display:none !important; }
 #mobileOverviewMenuBtn{ display:none !important; }
 .mobile-section-menu-btn{ display:none !important; }
+
+/* ---------- Trip status filter buttons + status pill on trip cards ---------- */
+#tripStatusActions{ flex-wrap: wrap; }
+#tripStatusActions .btn.active{
+  background: var(--brand) !important;
+  color: #fff !important;
+  border-color: var(--brand) !important;
+}
+.trip-status-pill{
+  font-size: 12px; font-weight: 600;
+  padding: 2px 10px;
+}
+.trip-status-pill.trip-status-active{
+  background: color-mix(in oklab, var(--ok) 16%, transparent);
+  color: var(--ok);
+}
+.trip-status-pill.trip-status-upcoming{
+  background: color-mix(in oklab, var(--brand) 16%, transparent);
+  color: var(--brand);
+}
+.trip-status-pill.trip-status-past{
+  background: color-mix(in oklab, var(--muted) 20%, transparent);
+  color: var(--muted);
+}

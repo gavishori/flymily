@@ -2140,6 +2140,7 @@ state = Object.assign(state, {
   maps: state.maps ?? { mini: null, big: null, home: null, layers: { expenses: null, journal: null }, select: null, selectMarker: null, currentModal: null },
   shared: state.shared ?? { enabled: false, token: null, readOnly: false },
   filters: state.filters ?? {},
+  tripStatusFilter: state.tripStatusFilter ?? 'all',
   homeMapSelection: state.homeMapSelection ?? null,
   categories: state.categories ?? {},
   isDirty: state.isDirty ?? false,
@@ -2817,6 +2818,9 @@ async function renderTripList(){
       hydrateTripsForSearch(s);
     }
   }
+  if(state.tripStatusFilter && state.tripStatusFilter !== 'all'){
+    items = items.filter(t => getTripStatus(t) === state.tripStatusFilter);
+  }
   state._tripListRenderToken = (state._tripListRenderToken || 0) + 1;
   const renderToken = state._tripListRenderToken;
   list.className = state.viewMode === 'map' ? 'map-view' : (state.viewMode==='grid' ? 'grid' : 'list');
@@ -2880,6 +2884,23 @@ async function renderTripList(){
     console.info('[perf] renderTripList', window.__lastRenderTripListPerf);
   }catch(_){}
 }
+// Classifies a trip as 'past' (end date before today), 'upcoming' (start date
+// after today), or 'active' (today falls within the trip's dates, or the
+// dates are missing/ambiguous). Reuses the same date-only comparison already
+// used by the mobile "active trip window" logic (isTripInMobileActiveWindow).
+function getTripStatus(trip){
+  const today = _parseISODateOnly(_todayKey());
+  const start = _parseISODateOnly(trip?.start);
+  const end = _parseISODateOnly(trip?.end);
+  if(end && today && end.getTime() < today.getTime()) return 'past';
+  if(start && today && start.getTime() > today.getTime()) return 'upcoming';
+  return 'active';
+}
+function tripStatusPill(t){
+  const status = getTripStatus(t);
+  const label = status === 'past' ? 'הסתיימה' : status === 'upcoming' ? 'עתידית' : 'פעילה';
+  return `<div class="pill trip-status-pill trip-status-${status}">${label}</div>`;
+}
 function cardHTML(t, s){
   const period = `${fmtDate(t.start)} – ${fmtDate(t.end)}`;
   const where = t.__match?.where || [];
@@ -2890,6 +2911,7 @@ function cardHTML(t, s){
     <div class="muted">${period}</div>
     <div class="trip-footer-grid">
       <div class="pill types-pill" data-trip="${t.id}" data-keyword="${esc((t.types||'').toString())}">${esc((t.types||'').toString())}</div>
+      ${tripStatusPill(t)}
       <button class="menu-btn" data-id="${t.id}" aria-label="פעולות">
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-more-vertical"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
       </button>
@@ -2905,6 +2927,7 @@ function rowHTML(t, s){
       <strong>${esc(t.destination||'ללא יעד')}</strong>
       <span class="muted">${period}</span>
     <div class="pill types-pill" data-trip="${t.id}" data-keyword="${esc((t.types||'').toString())}">${esc((t.types||'').toString())}</div>
+    ${tripStatusPill(t)}
     </div>
     <button class="menu-btn" data-id="${t.id}" aria-label="פעולות">
       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-more-vertical"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
@@ -3832,6 +3855,14 @@ let sortAsc = false; $('#btnSortTrips').addEventListener('click', ()=>{
 $('#btnViewGrid').addEventListener('click', ()=>{ state.lastNonMapView='grid'; state.viewMode='grid'; renderTripList(); });
 $('#btnViewList').addEventListener('click', ()=>{ state.lastNonMapView='list'; state.viewMode='list'; renderTripList(); });
 $('#btnViewMap').addEventListener('click', ()=>{ if(state.viewMode !== 'map') state.lastNonMapView = state.viewMode === 'list' ? 'list' : 'grid'; state.viewMode='map'; renderTripList(); });
+
+document.querySelectorAll('#tripStatusActions [data-status]').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    state.tripStatusFilter = btn.dataset.status;
+    document.querySelectorAll('#tripStatusActions [data-status]').forEach(b=> b.classList.toggle('active', b===btn));
+    renderTripList();
+  });
+});
 
 // Meta save, verify, budgets
 $('#btnVerifyOnMap').click(() => {
