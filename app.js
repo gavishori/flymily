@@ -451,11 +451,6 @@ function wireHeaderControls(){
       window.location.reload();
     }, 'refreshTapWired');
   }
-  const navDrawerToggle = document.getElementById('navDrawerToggle');
-  if(navDrawerToggle){
-    bindTap(navDrawerToggle, ()=> openNavDrawer(), 'navDrawerToggleTapWired');
-  }
-
   window.__authPrimarySwap = (loggedIn, email='')=>{
     const old = document.getElementById('btnLogin');
     if(!old) return;
@@ -515,13 +510,18 @@ document.addEventListener('DOMContentLoaded', hideLegacyNavTriggers);
 window.addEventListener('resize', hideLegacyNavTriggers);
 window.addEventListener('pageshow', hideLegacyNavTriggers);
 
+function setNavDrawerTogglesExpanded(expanded){
+  ['navDrawerToggleDesktop', 'mobileOverviewNavBtn'].forEach(id=>{
+    document.getElementById(id)?.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+  });
+}
+
 function closeNavDrawer(){
   const drawer = document.getElementById('navDrawer');
   const backdrop = document.getElementById('navDrawerBackdrop');
-  const toggle = document.getElementById('navDrawerToggle');
   if(drawer){ drawer.classList.remove('show'); drawer.setAttribute('aria-hidden', 'true'); }
   if(backdrop){ backdrop.classList.remove('show'); backdrop.setAttribute('aria-hidden', 'true'); }
-  if(toggle) toggle.setAttribute('aria-expanded', 'false');
+  setNavDrawerTogglesExpanded(false);
   document.body.style.overflow = '';
 }
 
@@ -539,15 +539,25 @@ function syncNavDrawerActiveItem(){
 function openNavDrawer(){
   const drawer = document.getElementById('navDrawer');
   const backdrop = document.getElementById('navDrawerBackdrop');
-  const toggle = document.getElementById('navDrawerToggle');
   if(!drawer || !backdrop) return;
   hideLegacyNavTriggers();
   syncNavDrawerActiveItem();
   drawer.classList.add('show'); drawer.setAttribute('aria-hidden', 'false');
   backdrop.classList.add('show'); backdrop.setAttribute('aria-hidden', 'false');
-  if(toggle) toggle.setAttribute('aria-expanded', 'true');
+  setNavDrawerTogglesExpanded(true);
   document.body.style.overflow = 'hidden';
 }
+
+// Delegated (document-level) click handler for both nav-drawer toggle
+// buttons - robust against the button being re-created/replaced by other
+// render logic after the page first loads, unlike a one-time direct
+// addEventListener binding.
+document.addEventListener('click', (ev)=>{
+  const btn = ev.target && ev.target.closest ? ev.target.closest('#navDrawerToggleDesktop, #mobileOverviewNavBtn') : null;
+  if(!btn) return;
+  ev.preventDefault();
+  openNavDrawer();
+});
 
 (function wireNavDrawer(){
   function wire(){
@@ -3778,11 +3788,9 @@ function wireOverviewSort(){
     try { localStorage.setItem('allSort', state.allSort); } catch (_) {}
     if (state.current) renderAllTimeline(state.current, state.allSort);
   });
-  const navBtn = document.getElementById('navDrawerToggleDesktop');
-  if(navBtn && navBtn.dataset.bound !== '1'){
-    navBtn.dataset.bound = '1';
-    navBtn.addEventListener('click', ()=> openNavDrawer());
-  }
+  // #navDrawerToggleDesktop's click is handled by the document-level
+  // delegated listener (see openNavDrawer()'s definition) - no direct
+  // binding needed here.
 }
 
 document.addEventListener('DOMContentLoaded', ()=>{
