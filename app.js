@@ -2208,6 +2208,8 @@ function enterHomeMode(){
   syncHomeMapMode();
   $('#tabs').style.display = 'none';
   $('#btnAllTrips').style.display = 'none';
+  const navToggle = document.getElementById('navDrawerToggle');
+  if(navToggle) navToggle.style.display = 'none';
   state.currentTripId = null;
   updateHeaderDestination();
   showView('welcome');
@@ -2219,6 +2221,8 @@ function enterTripMode(){
   syncHomeMapMode();
   $('#tabs').style.display = 'flex';
   $('#btnAllTrips').style.display = 'inline-block';
+  const navToggle = document.getElementById('navDrawerToggle');
+  if(navToggle) navToggle.style.display = 'inline-flex';
   updateHeaderDestination();
 }
 
