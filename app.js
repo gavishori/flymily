@@ -734,7 +734,7 @@ function syncJournalSelectionUi(){
           try{ invalidateMap(state.maps?.big); }catch(_){}
         }, 50);
       }
-    }catch(_){}
+    }catch(err){ console.error('renderCurrentTripView failed for view:', view, err); }
   }
 
   function showOnlyMobileView(view){
@@ -6192,14 +6192,9 @@ function toggleExpenseSort(){
 
 
 
-// Delegated click handler as a safety net (in case the direct wiring is skipped)
-document.addEventListener('click', (ev) => {
-  const el = ev.target;
-  if (!el) return;
-  if (el.id === 'btnSortExpenses') {
-    try { toggleExpenseSort(); } catch(e) { console.error('toggleExpenseSort failed', e); }
-  }
-});
+// (Removed: a second delegated click handler for #btnSortExpenses used to
+// duplicate the direct binding above - both fired on every click, so the
+// sort direction flipped twice and appeared to do nothing.)
 
 // === SHARE / IMPORT / EXPORT (Last Tab) ===
 
