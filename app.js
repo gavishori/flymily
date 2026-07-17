@@ -2451,6 +2451,7 @@ let __tripListBackfillTimer=null;
 let __subscribeTripsStartedAt = 0;
 let __tripSummaryFallbackStarted = false;
 let __autoOpenLatestTripId = null;
+let __autoFilteredToActiveTrips = false;
 
 function shouldUseLightTripLoading(){
   try{
@@ -2518,8 +2519,23 @@ function preferredMobileActiveTrip(trips){
 
 function maybeOpenLatestTripOnly(trips){
   try{
-    if(!shouldUseLightTripLoading()) return;
     if(state.currentTripId) return;
+    const activeTrips = getMobileActiveTrips(trips);
+    if(activeTrips.length > 1){
+      // More than one trip overlaps today - don't guess which one to open;
+      // show just the active ones (via the existing status filter) so the
+      // user can pick, matching the same UI already used for that filter.
+      if(!__autoFilteredToActiveTrips){
+        __autoFilteredToActiveTrips = true;
+        state.tripStatusFilter = 'active';
+        state.tripStatusFilterTouched = true;
+        document.querySelectorAll('#tripStatusActions [data-status]').forEach(b=>{
+          b.classList.toggle('active', b.dataset.status === 'active');
+        });
+        renderTripList();
+      }
+      return;
+    }
     const active = preferredMobileActiveTrip(trips);
     if(!active?.id || __autoOpenLatestTripId === active.id) return;
     __autoOpenLatestTripId = active.id;
