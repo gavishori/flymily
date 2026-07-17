@@ -52,7 +52,7 @@
 
   <link rel="stylesheet" href="./style.css?v=css-cleanup-20260716-1" />
   <link rel="stylesheet" href="./mobile-auth.css?v=mobile-date-fit-20260603-1" />
-  <link rel="stylesheet" href="./modern-theme.css?v=nav-fixes-20260717-1" />
+  <link rel="stylesheet" href="./modern-theme.css?v=nav-fixes-20260717-2" />
   <style id="expense-mobile-meta-force">
     @media (max-width: 820px){
       html body dialog#expenseModal .body > .expense-main-row,
@@ -1750,20 +1750,22 @@
       
           <button id="btnNewTrip" class="btn primary">+ נסיעה חדשה</button>
         </div>
-        <div class="list-actions" id="tripSearchActions">
-          <input id="searchTrips" class="input" placeholder="חפש נסיעה / מילה" />
-          <button id="btnSortTrips" class="btn">מיין תאריך יציאה</button>
-        </div>
-        <div class="list-actions" id="tripViewActions">
-          <button id="btnViewGrid" class="btn active">גלריה</button>
-          <button id="btnViewList" class="btn">רשימה</button>
-          <button id="btnViewMap" class="btn">מפה</button>
-        </div>
-        <div class="list-actions" id="tripStatusActions">
-          <button class="btn active" data-status="all">הכל</button>
-          <button class="btn" data-status="active">נוכחית</button>
-          <button class="btn" data-status="upcoming">עתידיות</button>
-          <button class="btn" data-status="past">האחרונה שהסתיימה</button>
+        <div class="trip-controls-row" id="tripControlsRow">
+          <div class="list-actions" id="tripSearchActions">
+            <input id="searchTrips" class="input" placeholder="חפש נסיעה / מילה" />
+            <button id="btnSortTrips" class="btn">מיין תאריך יציאה</button>
+          </div>
+          <div class="list-actions" id="tripViewActions">
+            <button id="btnViewGrid" class="btn active">גלריה</button>
+            <button id="btnViewList" class="btn">רשימה</button>
+            <button id="btnViewMap" class="btn">מפה</button>
+          </div>
+          <div class="list-actions" id="tripStatusActions">
+            <button class="btn active" data-status="all">הכל</button>
+            <button class="btn" data-status="active">נוכחית</button>
+            <button class="btn" data-status="upcoming">עתידיות</button>
+            <button class="btn" data-status="past">האחרונה שהסתיימה</button>
+          </div>
         </div>
         <div id="tripList" class="grid" aria-live="polite"></div>
       </aside>

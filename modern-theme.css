@@ -261,3 +261,27 @@ html body .expense-detail-surface{
   max-width: 100% !important;
   box-sizing: border-box !important;
 }
+
+/* ---------- Trip list controls: one row instead of three stacked ----------
+   Search+sort / gallery-list-map / status-filter used to each be their own
+   full-width row. Groups them into a single flex row (wrapping on narrow
+   screens) with a bigger gap between groups than within a group, so the
+   grouping stays visually obvious. */
+.trip-controls-row{
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 28px;
+  margin-bottom: var(--space-3, 12px);
+}
+.trip-controls-row .list-actions{
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+.trip-controls-row #tripSearchActions #searchTrips{
+  width: 220px;
+  max-width: 100%;
+}
