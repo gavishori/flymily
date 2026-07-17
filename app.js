@@ -574,10 +574,22 @@ document.addEventListener('click', (ev)=>{
     });
 
     drawer.querySelectorAll('.nav-drawer-item').forEach(item=>{
-      item.addEventListener('click', ()=>{
+      item.addEventListener('click', (ev)=>{
         const nav = item.dataset.nav;
-        if(nav && typeof applyOverviewSelection === 'function') applyOverviewSelection(nav);
-        drawer.querySelectorAll('.nav-drawer-item').forEach(el=> el.classList.toggle('active', el===item));
+        if(nav === 'breakdown'){
+          // Not a section switch - open the category breakdown dialog directly
+          // (same target the old per-section "פעולות" menu used). Stop this
+          // click from bubbling to document - there's a pre-existing global
+          // "click outside the breakdown dialog closes it" listener that
+          // would otherwise immediately close the dialog we just opened,
+          // since this click's origin (the drawer) is outside its bounds.
+          ev.stopPropagation();
+          if(typeof window.__openBreakdownDialog === 'function') window.__openBreakdownDialog(true);
+          else document.getElementById('openBreakdownBtn')?.click();
+        } else if(nav && typeof applyOverviewSelection === 'function'){
+          applyOverviewSelection(nav);
+          drawer.querySelectorAll('.nav-drawer-item').forEach(el=> el.classList.toggle('active', el===item));
+        }
         closeNavDrawer();
       });
     });
