@@ -963,7 +963,8 @@ function syncJournalSelectionUi(){
       };
 
       rail.append(
-        makeProxy('mobileOverviewMenuBtn', '&#9776;', 'פעולות'),
+        makeProxy('mobileOverviewNavBtn', '&#9776;', 'ניווט'),
+        makeProxy('mobileOverviewMenuBtn', '&#8942;', 'פעולות'),
         makeProxy('mobileOverviewExpenseBtn', '+', 'הוצאה'),
         makeProxy('mobileOverviewJournalBtn', '&#9998;', 'יומן'),
         makeProxy('mobileOverviewSortBtn', '&#8597;', 'מיין'),
@@ -989,6 +990,7 @@ function syncJournalSelectionUi(){
       }, { passive:false });
     };
 
+    bindProxy('mobileOverviewNavBtn', ()=> openNavDrawer());
     bindProxy('mobileOverviewMenuBtn', ()=> openMobileSectionMenu('overview'));
     bindProxy('mobileOverviewExpenseBtn', ()=> triggerButton('btnQuickAddExpense'));
     bindProxy('mobileOverviewJournalBtn', ()=> triggerButton('btnQuickAddJournal'));
