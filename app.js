@@ -451,6 +451,10 @@ function wireHeaderControls(){
       window.location.reload();
     }, 'refreshTapWired');
   }
+  const navDrawerToggle = document.getElementById('navDrawerToggle');
+  if(navDrawerToggle){
+    bindTap(navDrawerToggle, ()=> openNavDrawer(), 'navDrawerToggleTapWired');
+  }
 
   window.__authPrimarySwap = (loggedIn, email='')=>{
     const old = document.getElementById('btnLogin');
@@ -487,6 +491,94 @@ function wireHeaderControls(){
   window.__refreshHeaderAuthUi = refreshHeaderAuthUi;
   refreshHeaderAuthUi();
 }
+// ---- Hamburger nav drawer: replaces the old desktop <select> / mobile
+// bottom-sheet section-navigation triggers with one slide-out panel. Modeled
+// on the #mobileAuthOverlay open/close lifecycle (backdrop click, Escape,
+// wired-once guard). Drawer items just call the existing applyOverviewSelection()
+// - same function the old <select>'s change handler already called - so the
+// underlying tab-switching logic is untouched.
+
+// The mobile action-rail's own "פעולות" hamburger button (#mobileOverviewMenuBtn)
+// and its per-section twins (.mobile-section-menu-btn, e.g. "פעולות מפה") are
+// re-created/re-shown by several existing !important CSS rules with higher
+// specificity than a plain hide rule can beat cleanly - so hide them here via
+// inline style instead of fighting that cascade. Their quick-action siblings
+// (search/sort/add-expense/add-journal/collapse) are untouched.
+function hideLegacyNavTriggers(){
+  const menuBtn = document.getElementById('mobileOverviewMenuBtn');
+  if(menuBtn) menuBtn.style.setProperty('display', 'none', 'important');
+  document.querySelectorAll('.mobile-section-menu-btn').forEach(el=>{
+    el.style.setProperty('display', 'none', 'important');
+  });
+}
+document.addEventListener('DOMContentLoaded', hideLegacyNavTriggers);
+window.addEventListener('resize', hideLegacyNavTriggers);
+window.addEventListener('pageshow', hideLegacyNavTriggers);
+
+function closeNavDrawer(){
+  const drawer = document.getElementById('navDrawer');
+  const backdrop = document.getElementById('navDrawerBackdrop');
+  const toggle = document.getElementById('navDrawerToggle');
+  if(drawer){ drawer.classList.remove('show'); drawer.setAttribute('aria-hidden', 'true'); }
+  if(backdrop){ backdrop.classList.remove('show'); backdrop.setAttribute('aria-hidden', 'true'); }
+  if(toggle) toggle.setAttribute('aria-expanded', 'false');
+  document.body.style.overflow = '';
+}
+
+function syncNavDrawerActiveItem(){
+  const drawer = document.getElementById('navDrawer');
+  if(!drawer) return;
+  const current = document.body.dataset.mobileActiveView
+    || document.querySelector('#tabs [data-tab].active')?.dataset?.tab
+    || 'meta';
+  drawer.querySelectorAll('.nav-drawer-item').forEach(item=>{
+    item.classList.toggle('active', item.dataset.nav === current);
+  });
+}
+
+function openNavDrawer(){
+  const drawer = document.getElementById('navDrawer');
+  const backdrop = document.getElementById('navDrawerBackdrop');
+  const toggle = document.getElementById('navDrawerToggle');
+  if(!drawer || !backdrop) return;
+  hideLegacyNavTriggers();
+  syncNavDrawerActiveItem();
+  drawer.classList.add('show'); drawer.setAttribute('aria-hidden', 'false');
+  backdrop.classList.add('show'); backdrop.setAttribute('aria-hidden', 'false');
+  if(toggle) toggle.setAttribute('aria-expanded', 'true');
+  document.body.style.overflow = 'hidden';
+}
+
+(function wireNavDrawer(){
+  function wire(){
+    const drawer = document.getElementById('navDrawer');
+    const backdrop = document.getElementById('navDrawerBackdrop');
+    const closeBtn = document.getElementById('navDrawerClose');
+    if(!drawer || !backdrop || drawer._navDrawerWired) return;
+    drawer._navDrawerWired = true;
+
+    backdrop.addEventListener('click', ()=> closeNavDrawer());
+    closeBtn?.addEventListener('click', ()=> closeNavDrawer());
+    document.addEventListener('keydown', (ev)=>{
+      if(ev.key === 'Escape' && drawer.classList.contains('show')) closeNavDrawer();
+    });
+
+    drawer.querySelectorAll('.nav-drawer-item').forEach(item=>{
+      item.addEventListener('click', ()=>{
+        const nav = item.dataset.nav;
+        if(nav && typeof applyOverviewSelection === 'function') applyOverviewSelection(nav);
+        drawer.querySelectorAll('.nav-drawer-item').forEach(el=> el.classList.toggle('active', el===item));
+        closeNavDrawer();
+      });
+    });
+  }
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', wire);
+  }else{
+    wire();
+  }
+})();
+
 document.addEventListener('DOMContentLoaded', wireHeaderControls);
 document.addEventListener('DOMContentLoaded', wireReliableMobileActions);
 document.addEventListener('DOMContentLoaded', syncViewportModeClasses);
