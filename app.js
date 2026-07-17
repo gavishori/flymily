@@ -9010,7 +9010,11 @@ function renderCategoryBreakdownNode(targetId){
     };
 
     function getNotesRows(){
-      return body.querySelectorAll('tr.exp-item:has(td.notes)');
+      // Avoid the CSS :has() selector here - it's only broadly supported in
+      // fairly recent browsers, and unlike the combined-overview toggle
+      // (which uses a plain class instead), this manager depended on it
+      // entirely, silently doing nothing on older/unsupported browsers.
+      return Array.from(body.querySelectorAll('tr.exp-item')).filter(row => row.querySelector('td.notes'));
     }
 
     function isRowHidden(row){
