@@ -783,6 +783,18 @@ function syncJournalSelectionUi(){
       const select = document.getElementById('overviewTabSelect');
       if(select && select.value !== v) select.value = v;
       showOnlyMobileView(v);
+      // Force a fresh render here rather than relying on the delayed
+      // pre-render scheduled when the trip first loaded (loadTrip's
+      // scheduleViewRender) - that timer can still be pending (or the
+      // trip may have been reloaded since), leaving the table empty and
+      // making the sort/collapse-all toolbar look "broken" (nothing to
+      // act on) when reached directly via the nav drawer.
+      if(state.current){
+        try{
+          if(v === 'expenses' && typeof renderExpenses === 'function') renderExpenses(state.current, state.expenseSort);
+          else if(v === 'journal' && typeof renderJournal === 'function') renderJournal(state.current, state.journalSort);
+        }catch(_){ }
+      }
       return;
     }
 
