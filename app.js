@@ -2141,6 +2141,7 @@ state = Object.assign(state, {
   shared: state.shared ?? { enabled: false, token: null, readOnly: false },
   filters: state.filters ?? {},
   tripStatusFilter: state.tripStatusFilter ?? 'all',
+  tripStatusFilterTouched: state.tripStatusFilterTouched ?? false,
   homeMapSelection: state.homeMapSelection ?? null,
   categories: state.categories ?? {},
   isDirty: state.isDirty ?? false,
@@ -2804,7 +2805,11 @@ async function renderTripList(){
   const search = $('#searchTrips').value?.trim();
   let items = [...state.trips];
   let s = null;
-  if(shouldUseLightTripLoading() && !search){
+  // The mobile "light loading" shortcut (show only the single currently-active
+  // trip) is a default-view convenience, not a hard limit - once the user
+  // explicitly picks a status filter (all/upcoming/past) they want to see the
+  // matching trips, not just "what's active now".
+  if(shouldUseLightTripLoading() && !search && !state.tripStatusFilterTouched){
     items = getMobileActiveTrips(items).slice(0, 1);
   }
   if(search){
@@ -3859,6 +3864,7 @@ $('#btnViewMap').addEventListener('click', ()=>{ if(state.viewMode !== 'map') st
 document.querySelectorAll('#tripStatusActions [data-status]').forEach(btn=>{
   btn.addEventListener('click', ()=>{
     state.tripStatusFilter = btn.dataset.status;
+    state.tripStatusFilterTouched = true;
     document.querySelectorAll('#tripStatusActions [data-status]').forEach(b=> b.classList.toggle('active', b===btn));
     renderTripList();
   });
