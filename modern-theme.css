@@ -139,3 +139,86 @@ nav.tabs [aria-selected="true"], nav.tabs .active{
   .card, .trip-card{ border-radius: var(--radius) !important; }
   .btn{ min-height: 40px; }
 }
+
+/* ---------- Hamburger nav drawer (replaces the old section <select>/
+   mobile bottom-sheet with one consistent slide-out panel) ---------- */
+.nav-drawer-toggle{
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 40px; height: 40px; padding: 0;
+  border-radius: var(--radius-sm) !important;
+  font-size: 20px; line-height: 1;
+  background: var(--card);
+  border: 1px solid var(--border);
+  color: var(--ink);
+  cursor: pointer;
+}
+.nav-drawer-toggle:hover{ box-shadow: var(--shadow-sm); }
+
+.nav-drawer-backdrop{
+  position: fixed; inset: 0;
+  background: color-mix(in oklab, #0b0e14 55%, transparent);
+  opacity: 0; pointer-events: none;
+  transition: opacity var(--dur) var(--ease);
+  z-index: 998;
+}
+.nav-drawer-backdrop.show{ opacity: 1; pointer-events: auto; }
+
+.nav-drawer{
+  position: fixed; top: 0; bottom: 0; inset-inline-start: 0;
+  width: min(300px, 82vw);
+  background: var(--card);
+  border-inline-end: 1px solid var(--border);
+  box-shadow: var(--shadow-lg);
+  transform: translateX(100%);
+  transition: transform var(--dur) var(--ease);
+  z-index: 999;
+  display: flex; flex-direction: column;
+  overflow-y: auto;
+}
+.nav-drawer.show{ transform: translateX(0); }
+
+.nav-drawer-header{
+  display: flex; align-items: center; justify-content: space-between;
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--border);
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.nav-drawer-list{ display: flex; flex-direction: column; padding: var(--space-2); gap: var(--space-1); }
+
+.nav-drawer-item{
+  display: flex; align-items: center; gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-3);
+  border-radius: var(--radius-sm);
+  border: none; background: transparent;
+  color: var(--ink);
+  font: inherit; font-weight: 500; font-size: 15px;
+  text-align: start;
+  cursor: pointer;
+  transition: background-color var(--dur) var(--ease), color var(--dur) var(--ease);
+}
+.nav-drawer-item:hover{ background: color-mix(in oklab, var(--brand) 8%, transparent); }
+.nav-drawer-item.active{
+  background: color-mix(in oklab, var(--brand) 14%, transparent);
+  color: var(--brand);
+  font-weight: 700;
+}
+.nav-drawer-icon{ font-size: 18px; width: 24px; text-align: center; flex-shrink: 0; }
+
+@media (prefers-reduced-motion: reduce){
+  .nav-drawer, .nav-drawer-backdrop{ transition: none; }
+}
+
+/* Hide (not delete) the old section-navigation triggers now that the
+   hamburger drawer above replaces them - the desktop <select> and the
+   mobile per-section "פעולות"/hamburger menu buttons. Their per-section
+   quick-action siblings (search/sort/add-expense/add-journal/collapse)
+   are untouched - only the navigation-menu buttons are hidden. Selectors
+   match the competing style.css rules exactly so this wins the cascade tie
+   (same specificity, later source order). */
+#overviewTabSelect{ display:none !important; }
+.tab-select-wrap[data-tab="overview"]{ display:none !important; }
+#mobileOverviewMenuBtn{ display:none !important; }
+.mobile-section-menu-btn{ display:none !important; }

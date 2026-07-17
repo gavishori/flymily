@@ -3,12 +3,12 @@
 <head>
   <meta charset="utf-8" />
   <style>
-    :root{--bg:#f6f7fb;--card:#fff;--ink:#0e1116;--muted:#415266;--brand:#1a73ff;--border:#e6e9ef;--danger:#d9363e;--shadow:0 16px 30px rgba(16,24,40,.08)}
+    :root{--bg:#f4f7fa;--card:#fff;--ink:#1c2b36;--muted:#5b7184;--brand:#2b7a8c;--border:#dbe3e8;--danger:#c1554a;--shadow:0 10px 24px rgba(31,63,82,.08)}
     *{box-sizing:border-box}
     html,body{min-height:100%;margin:0}
     body{background:var(--bg);color:var(--ink);font-family:Rubik,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;direction:rtl;-webkit-text-size-adjust:100%;text-size-adjust:100%}
     .app{min-height:100dvh;display:grid;grid-template-rows:auto 1fr}
-    .app>header{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--border);background:rgba(255,255,255,.94);backdrop-filter:blur(12px);position:sticky;top:0;z-index:10}
+    .app>header{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--border);background:color-mix(in oklab, var(--brand) 92%, transparent);backdrop-filter:blur(12px);position:sticky;top:0;z-index:10}
     .brand,.brand-text{font-weight:700;letter-spacing:.2px;line-height:1.2}
     .spacer{flex:1}
     .btn,button,.input,input,select,textarea{font:inherit;max-width:100%}
@@ -1764,11 +1764,15 @@
 
       <main class="content" id="main">
         <nav class="tabs" id="tabs" style="display:none">
-          
+
+          <button id="navDrawerToggle" class="nav-drawer-toggle" type="button" aria-label="פתח ניווט בין מסכי הנסיעה" aria-haspopup="true" aria-expanded="false" aria-controls="navDrawer">
+            <span aria-hidden="true">&#9776;</span>
+          </button>
+
           <button data-tab="meta">נתוני נסיעה</button>
-          
+
           <button data-tab="map">מפה</button>
-          
+
           <button data-tab="share">ייבוא / ייצוא / שיתוף</button>
 
           <div class="tab-select-wrap" data-tab="overview">
@@ -2312,6 +2316,22 @@ id="expenseModal" class="modal">
       </div>
     </div>
   </div>
+
+  <div id="navDrawerBackdrop" class="nav-drawer-backdrop" aria-hidden="true"></div>
+  <aside id="navDrawer" class="nav-drawer" aria-hidden="true" aria-label="ניווט בין מסכי הנסיעה">
+    <div class="nav-drawer-header">
+      <span>ניווט</span>
+      <button id="navDrawerClose" class="btn icon-only" type="button" aria-label="סגור תפריט">&times;</button>
+    </div>
+    <nav class="nav-drawer-list">
+      <button type="button" class="nav-drawer-item" data-nav="meta"><span class="nav-drawer-icon" aria-hidden="true">🧭</span><span>נתוני נסיעה</span></button>
+      <button type="button" class="nav-drawer-item" data-nav="mix"><span class="nav-drawer-icon" aria-hidden="true">📖</span><span>יומן + הוצאות</span></button>
+      <button type="button" class="nav-drawer-item" data-nav="journal"><span class="nav-drawer-icon" aria-hidden="true">📝</span><span>יומן</span></button>
+      <button type="button" class="nav-drawer-item" data-nav="expenses"><span class="nav-drawer-icon" aria-hidden="true">💸</span><span>הוצאות</span></button>
+      <button type="button" class="nav-drawer-item" data-nav="map"><span class="nav-drawer-icon" aria-hidden="true">🗺️</span><span>מפה</span></button>
+      <button type="button" class="nav-drawer-item" data-nav="share"><span class="nav-drawer-icon" aria-hidden="true">📤</span><span>ייבוא / ייצוא / שיתוף</span></button>
+    </nav>
+  </aside>
 </body>
     
 </html>

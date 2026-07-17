@@ -1,6 +1,6 @@
 :root{
-  --bg:#0f1115; --card:#151922; --ink:#e9eef4; --muted:#9fb0c0; --brand:#8bd3ff; --accent:#ffd166; --ok:#06d6a0; --danger:#ef476f;
-  --border:#273142; --shadow:0 10px 30px rgba(0,0,0,.25);
+  --bg:#0f1720; --card:#16212b; --ink:#e7edf1; --muted:#93a7b3; --brand:#5fb0c2; --accent:#e0ac5f; --ok:#57b98d; --danger:#d97a70;
+  --border:#26333d; --shadow:0 10px 24px rgba(0,0,0,.35);
   --glass: color-mix(in oklab, var(--card) 78%, transparent);
 }
 
@@ -211,7 +211,7 @@
   }
   html body.mobile-ui dialog#expenseModal #expText.input.rtf:focus,
   html body.mobile-ui dialog#journalModal #jrText.input.rtf:focus{
-    outline:2px solid var(--brand,#1a73ff) !important;
+    outline:2px solid var(--brand,#2b7a8c) !important;
     outline-offset:2px !important;
   }
   html body.mobile-ui dialog#expenseModal .editor-resize-handle,
@@ -3667,7 +3667,7 @@ html body a.link-icon-only::before{
   }
 }
 [data-theme="light"]{
-  --bg:#f6f7fb; --card:#ffffff; --ink:#0e1116; --muted:#415266; --brand:#1a73ff; --accent:#faad14; --ok:#089e71; --danger:#d9363e; --border:#e6e9ef; --shadow:0 16px 30px rgba(16,24,40,.08);
+  --bg:#f4f7fa; --card:#ffffff; --ink:#1c2b36; --muted:#5b7184; --brand:#2b7a8c; --accent:#d99a45; --ok:#3a8f6b; --danger:#c1554a; --border:#dbe3e8; --shadow:0 10px 24px rgba(31,63,82,.08);
   --glass: color-mix(in oklab, #ffffff 70%, transparent);
 }
 *{box-sizing:border-box}
@@ -5631,7 +5631,7 @@ html.share-open [style*="overflow:scroll"]{
   padding:10px 12px;
   border:1px solid var(--border);
   border-radius:12px;
-  background:color-mix(in oklab,var(--panel,#fff) 96%,var(--brand,#1a73ff) 4%);
+  background:color-mix(in oklab,var(--panel,#fff) 96%,var(--brand,#2b7a8c) 4%);
 }
 .breakdown-summary-card span{
   color:var(--muted,#6b7280);
@@ -5730,7 +5730,7 @@ html.share-open [style*="overflow:scroll"]{
     min-width:74px;
     min-height:40px;
     padding:8px 14px;
-    border:2px solid var(--brand,#1a73ff);
+    border:2px solid var(--brand,#2b7a8c);
     color:var(--ink,#0e1116);
     background:#fff;
     border-radius:999px;
@@ -6632,12 +6632,12 @@ html, body { height:100%; }
 
 /* 1. פלטת צבעים ורדיוסים אחידים */
 :root {
-  /* הגדרת צבעי המותג החדשים */
-  --tello-blue: #0077ff;
-  --tello-green: #00b74a;
-  --tello-green-dark: #00913c;
-  --tello-light-blue: #8bd3ff;
-  --tello-light-green: #06d6a0;
+  /* הגדרת צבעי המותג החדשים - פלטת טיל-כחול רגועה ומקצועית */
+  --tello-blue: #2b7a8c;
+  --tello-green: #d99a45;
+  --tello-green-dark: #206572;
+  --tello-light-blue: #5fb0c2;
+  --tello-light-green: #e0ac5f;
 
   /* רדיוס גבולות אחיד */
   --radius: 10px;
@@ -6646,26 +6646,26 @@ html, body { height:100%; }
 
 /* 2. עדכון פלטת צבעים (מצב בהיר) */
 [data-theme="light"] {
-  --brand: var(--tello-blue);    /* כחול ראשי (כמו בתמונה) */
-  --accent: var(--tello-green);   /* ירוק לפעולות מרכזיות (כמו הכפתור בתמונה) */
-  --ok: var(--tello-green);       /* ירוק להצלחה (אחידות) */
-  --ink: #0e1116;                /* טקסט כהה וברור */
-  --muted: #415266;              /* טקסט משני */
+  --brand: var(--tello-blue);    /* טיל-כחול רגוע כצבע מותג ראשי */
+  --accent: var(--tello-green);   /* ענבר מושתק כמשלים חם לטיל-כחול */
+  --ok: #3a8f6b;                  /* ירוק מושתק להצלחה, נפרד מהאקסנט */
+  --ink: #1c2b36;                /* טקסט כהה וברור, גוון כחלחל רך */
+  --muted: #5b7184;              /* טקסט משני */
   --card: #ffffff;
-  --bg: #f7f8fb;                 /* רקע כללי נקי */
-  --border: #dde2e8;            /* גבול מעט יותר ברור */
-  --shadow: 0 4px 12px rgba(0, 119, 255, 0.08); /* הצללה קלה בגוון כחול */
+  --bg: #f4f7fa;                 /* רקע כללי רך, לא לבן חד */
+  --border: #dbe3e8;
+  --shadow: 0 10px 24px rgba(31,63,82,.08); /* הצללה קלה בגוון טיל */
 }
 
 /* 3. עדכון פלטת צבעים (מצב כהה - מותאם) */
 [data-theme="dark"] {
-  --brand: var(--tello-light-blue);   /* כחול בהיר למצב כהה */
-  --accent: var(--tello-light-green); /* ירוק בהיר למצב כהה */
-  --ok: var(--tello-light-green);     /* אחידות */
-  --bg: #0a1018;                   /* כחול עמוק יותר */
-  --card: #121a24;                  /* כחול עמוק יותר */
-  --border: #273142;
-  --shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+  --brand: var(--tello-light-blue);   /* טיל-כחול בהיר יותר למצב כהה */
+  --accent: var(--tello-light-green); /* ענבר בהיר יותר למצב כהה */
+  --ok: #57b98d;                     /* ירוק מושתק, נפרד מהאקסנט */
+  --bg: #0f1720;
+  --card: #16212b;
+  --border: #26333d;
+  --shadow: 0 10px 24px rgba(0, 0, 0, .35);
 }
 
 /* 4. עיצוב ה-Header מחדש */
@@ -18924,7 +18924,7 @@ html body .expenses-table tr.exp-item[data-kind="expense"]:not(.exp-details) .ex
     min-width:74px !important;
     min-height:40px !important;
     padding:8px 14px !important;
-    border:2px solid var(--brand,#1a73ff) !important;
+    border:2px solid var(--brand,#2b7a8c) !important;
     background:#fff !important;
     border-radius:999px !important;
     font-weight:700 !important;
@@ -19246,9 +19246,9 @@ html body .expenses-table tr.exp-item[data-kind="expense"]:not(.exp-details) .ex
 /* Final readability guard: keep the main header legible in light theme. */
 body[data-theme="light"] header,
 body[data-theme="light"] .app > header{
-  background:var(--brand,#1a73ff) !important;
+  background:var(--brand,#2b7a8c) !important;
   color:#fff !important;
-  border-bottom:1px solid color-mix(in oklab, var(--brand,#1a73ff) 72%, #000 28%) !important;
+  border-bottom:1px solid color-mix(in oklab, var(--brand,#2b7a8c) 72%, #000 28%) !important;
 }
 
 body[data-theme="light"] header .brand,
