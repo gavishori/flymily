@@ -3778,6 +3778,11 @@ function wireOverviewSort(){
     try { localStorage.setItem('allSort', state.allSort); } catch (_) {}
     if (state.current) renderAllTimeline(state.current, state.allSort);
   });
+  const navBtn = document.getElementById('navDrawerToggleDesktop');
+  if(navBtn && navBtn.dataset.bound !== '1'){
+    navBtn.dataset.bound = '1';
+    navBtn.addEventListener('click', ()=> openNavDrawer());
+  }
 }
 
 document.addEventListener('DOMContentLoaded', ()=>{
