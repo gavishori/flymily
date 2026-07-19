@@ -3542,7 +3542,7 @@ function renderExpenses(t, order){
 
     const displayTitle = deriveExpenseTitle(e);
     const cat = esc(e.category||'');
-    const desc = (e.descHtml && /(<a|link-icon)/i.test(e.descHtml)) ? e.descHtml : linkifyToIcons(e.descHtml || e.desc || '');
+    const desc = linkifyToIcons(e.descHtml || e.desc || '');
     const mapIndex = mapNumbers.expense.get(String(e.id));
     
     const tr1 = document.createElement('tr');
@@ -3593,7 +3593,7 @@ function renderJournal(t, order){
     const d = dayjs(j.dateIso || j.createdAt);
     const dateStr = d.isValid() ? d.format('DD/MM/YYYY') : '';
     const timeStr = d.isValid() ? d.format('HH:mm') : '';
-    const text = (j.html && /(<a|link-icon)/i.test(j.html)) ? j.html : linkifyToIcons(j.html || j.text || '');
+    const text = linkifyToIcons(j.html || j.text || '');
 
     const tr1 = document.createElement('tr');
     tr1.className = 'exp-item';
@@ -3646,9 +3646,7 @@ function appendExpenseRowToTimeline(body, e, mapIndex){
   const d = dayjs(e.dateIso || e.createdAt);
   const amount = Number(e.amount||0).toLocaleString('he-IL', { minimumFractionDigits: 2 });
   const displayTitle = deriveExpenseTitle(e);
-  const desc = (e.descHtml && /(<a|link-icon|<br|<div|<p|<span)/i.test(e.descHtml))
-    ? e.descHtml
-    : linkifyToIcons(e.descHtml || e.desc || '');
+  const desc = linkifyToIcons(e.descHtml || e.desc || '');
   const tr1 = document.createElement('tr');
   tr1.className = 'exp-item';
   tr1.dataset.kind = 'expense';
@@ -3686,9 +3684,7 @@ function appendExpenseRowToTimeline(body, e, mapIndex){
 function appendJournalRowToTimeline(body, j, mapIndex){
   const d = dayjs(j.dateIso || j.createdAt);
   const displayTitle = deriveJournalTitle(j);
-  const text = (j.html && /(<a|link-icon|<br|<div|<p|<span)/i.test(j.html))
-    ? j.html
-    : linkifyToIcons(j.html || j.text || '');
+  const text = linkifyToIcons(j.html || j.text || '');
   const selectionOn = getOverviewMode() === 'journal' && !!state.journalSelectionMode;
   const checkedAttr = selectionOn && state.journalSelectedIds && state.journalSelectedIds.has(j.id) ? 'checked' : '';
   const hasMapPoint = Number.isFinite(+j.lat) && Number.isFinite(+j.lng);
@@ -7454,9 +7450,12 @@ function linkifyText(str, label){
 
 function linkifyToIcons(str){
   if(!str) return '';
-  // Escape '&','<','>' minimally for safety when input is plain text (not HTML)
-  const escaped = String(str).replace(/[&<>]/g, m=>({'&':'&','<':'<','>':'>'}[m]));
-  // If looks like HTML (has tags), continue; otherwise work on text
+  // Only escape '&','<','>' when the input is plain text (e.desc/j.text fallback).
+  // Real HTML (e.descHtml/j.html) must pass through as-is - escaping it here would
+  // turn its actual tags (<br>, existing <a class="link-icon">, etc.) into literal
+  // visible text instead of parsing them, corrupting already-formatted notes.
+  const looksLikeHtml = /<[a-z][\s\S]*>/i.test(str);
+  const escaped = looksLikeHtml ? String(str) : String(str).replace(/[&<>]/g, m=>({'&':'&','<':'<','>':'>'}[m]));
   const tmp = document.createElement('div');
   tmp.innerHTML = escaped;
   const urlRe = /((https?:\/\/|www\.)[^\s<]+)/gi;
