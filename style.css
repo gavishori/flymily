@@ -12980,7 +12980,6 @@ button, .btn, .menu-btn, select, input, textarea {
   }
 
   body.mobile-ui #view-map{
-    display:flex !important;
     flex-direction:column !important;
     gap:10px !important;
     min-height:calc(var(--vvh, 100dvh) - 136px) !important;
