@@ -49,21 +49,21 @@ html, body{
 
 /* ---------- Buttons ---------- */
 .btn{
-  border-radius: var(--radius-sm) !important;
+  border-radius: var(--radius-pill) !important;
   transition: transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease),
               background-color var(--dur) var(--ease), border-color var(--dur) var(--ease);
   font-weight: 600;
 }
 .btn:hover{ transform: translateY(-1px); box-shadow: var(--shadow-sm); }
-.btn:active{ transform: translateY(0); }
+.btn:active{ transform: translateY(0) scale(.97); }
 .btn:focus-visible{ outline: 2px solid var(--brand); outline-offset: 2px; }
 .btn.primary{
-  background: var(--brand) !important;
+  background: linear-gradient(135deg, var(--brand), color-mix(in oklab, var(--brand) 75%, var(--accent))) !important;
   color: #fff !important;
-  border-color: var(--brand) !important;
+  border-color: transparent !important;
   box-shadow: var(--shadow-sm);
 }
-.btn.primary:hover{ box-shadow: var(--shadow-md); filter: brightness(1.05); }
+.btn.primary:hover{ box-shadow: var(--shadow-md); filter: brightness(1.06); }
 .btn.danger:hover{ background: color-mix(in oklab, var(--danger) 12%, transparent); }
 
 /* Floating quick-add button (mobile) gets a bit more presence */
@@ -86,11 +86,24 @@ html, body{
 
 /* ---------- Cards ---------- */
 .card, .trip-card, .login-card, .share-card{
-  border-radius: var(--radius) !important;
+  border-radius: var(--radius-lg) !important;
   box-shadow: var(--shadow-sm);
   transition: box-shadow var(--dur) var(--ease), transform var(--dur) var(--ease);
 }
 .trip-card:hover{ box-shadow: var(--shadow-md); transform: translateY(-2px); }
+
+/* ---------- Entrance animation for list rows (expenses/journal/timeline) ----
+   Pure CSS, fires automatically whenever a row is freshly inserted into the
+   DOM (every render rebuilds the table body) - no JS changes needed. Opacity
+   only (never transform) since <tr> is display:table-row and animating
+   transform on table rows is unreliable across browsers. */
+tr.exp-item{
+  animation: rowIn .32s var(--ease) both;
+}
+@keyframes rowIn{
+  from{ opacity: 0; }
+  to{ opacity: 1; }
+}
 
 /* ---------- Dialogs / Modals ---------- */
 dialog{
@@ -109,13 +122,18 @@ dialog::backdrop{
 }
 @media (prefers-reduced-motion: reduce){
   dialog{ animation: none; }
-  .btn, .trip-card{ transition: none; }
+  .btn, .trip-card, tr.exp-item{ transition: none; animation: none; }
 }
 
 /* ---------- Header ---------- */
 .app > header, header{
   position: sticky; top: 0; z-index: 40;
+  background: linear-gradient(120deg, #6952d6, color-mix(in oklab, #6952d6 70%, #ff8a5c)) !important;
   backdrop-filter: saturate(160%) blur(10px);
+  box-shadow: 0 4px 18px color-mix(in oklab, var(--brand) 28%, transparent);
+}
+[data-theme="dark"] .app > header, [data-theme="dark"] header{
+  background: linear-gradient(120deg, #241d47, #3a2a4d) !important;
 }
 
 /* ---------- Tabs / nav ---------- */
@@ -145,14 +163,16 @@ nav.tabs [aria-selected="true"], nav.tabs .active{
 .nav-drawer-toggle{
   display: inline-flex; align-items: center; justify-content: center;
   width: 40px; height: 40px; padding: 0;
-  border-radius: var(--radius-sm) !important;
+  border-radius: var(--radius-pill) !important;
   font-size: 20px; line-height: 1;
-  background: var(--card);
-  border: 1px solid var(--border);
-  color: var(--ink);
+  background: color-mix(in oklab, var(--brand) 12%, var(--card));
+  border: 1px solid color-mix(in oklab, var(--brand) 24%, var(--border));
+  color: var(--brand);
   cursor: pointer;
+  transition: transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
 }
-.nav-drawer-toggle:hover{ box-shadow: var(--shadow-sm); }
+.nav-drawer-toggle:hover{ box-shadow: var(--shadow-sm); transform: translateY(-1px); }
+.nav-drawer-toggle:active{ transform: scale(.94); }
 
 .nav-drawer-backdrop{
   position: fixed; inset: 0;
@@ -170,7 +190,7 @@ nav.tabs [aria-selected="true"], nav.tabs .active{
   border-inline-end: 1px solid var(--border);
   box-shadow: var(--shadow-lg);
   transform: translateX(100%);
-  transition: transform var(--dur) var(--ease);
+  transition: transform .32s cubic-bezier(.32,1.1,.4,1);
   z-index: 999;
   display: flex; flex-direction: column;
   overflow-y: auto;
@@ -204,6 +224,8 @@ nav.tabs [aria-selected="true"], nav.tabs .active{
   background: color-mix(in oklab, var(--brand) 14%, transparent);
   color: var(--brand);
   font-weight: 700;
+  border-inline-start: 3px solid var(--brand);
+  padding-inline-start: calc(var(--space-3) - 3px);
 }
 .nav-drawer-icon{ font-size: 18px; width: 24px; text-align: center; flex-shrink: 0; }
 

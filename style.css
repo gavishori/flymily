@@ -6630,42 +6630,45 @@ html, body { height:100%; }
 
 /* === רענון עיצוב מקצועי (בהשראת Tello) === */
 
-/* 1. פלטת צבעים ורדיוסים אחידים */
+/* 1. פלטת צבעים ורדיוסים אחידים - זהות חדשה: סגול-אינדיגו + קורל חם */
 :root {
-  /* הגדרת צבעי המותג החדשים - פלטת טיל-כחול רגועה ומקצועית */
-  --tello-blue: #2b7a8c;
-  --tello-green: #d99a45;
-  --tello-green-dark: #206572;
-  --tello-light-blue: #5fb0c2;
-  --tello-light-green: #e0ac5f;
+  --tello-blue: #6952d6;
+  --tello-green: #ff8a5c;
+  --tello-green-dark: #e56a3c;
+  --tello-light-blue: #a996ff;
+  --tello-light-green: #ff9d75;
 
-  /* רדיוס גבולות אחיד */
-  --radius: 10px;
-  --radius-lg: 12px;
+  /* רדיוס גבולות גדול ורך יותר */
+  --radius: 14px;
+  --radius-lg: 20px;
 }
 
 /* 2. עדכון פלטת צבעים (מצב בהיר) */
 [data-theme="light"] {
-  --brand: var(--tello-blue);    /* טיל-כחול רגוע כצבע מותג ראשי */
-  --accent: var(--tello-green);   /* ענבר מושתק כמשלים חם לטיל-כחול */
-  --ok: #3a8f6b;                  /* ירוק מושתק להצלחה, נפרד מהאקסנט */
-  --ink: #1c2b36;                /* טקסט כהה וברור, גוון כחלחל רך */
-  --muted: #5b7184;              /* טקסט משני */
+  --brand: var(--tello-blue);     /* אינדיגו-סגול נועז כצבע מותג ראשי */
+  --accent: var(--tello-green);   /* קורל חם כמשלים לאינדיגו */
+  --ok: #2bb673;
+  --danger: #e5484d;
+  --ink: #1a1523;                 /* טקסט כהה בגוון סגלגל רך */
+  --muted: #6b6478;
   --card: #ffffff;
-  --bg: #f4f7fa;                 /* רקע כללי רך, לא לבן חד */
-  --border: #dbe3e8;
-  --shadow: 0 10px 24px rgba(31,63,82,.08); /* הצללה קלה בגוון טיל */
+  --bg: #f7f6fb;                  /* רקע כללי בגוון סגול-לבן רך */
+  --border: #e6e2f0;
+  --shadow: 0 8px 24px rgba(105,82,214,.14);
 }
 
 /* 3. עדכון פלטת צבעים (מצב כהה - מותאם) */
 [data-theme="dark"] {
-  --brand: var(--tello-light-blue);   /* טיל-כחול בהיר יותר למצב כהה */
-  --accent: var(--tello-light-green); /* ענבר בהיר יותר למצב כהה */
-  --ok: #57b98d;                     /* ירוק מושתק, נפרד מהאקסנט */
-  --bg: #0f1720;
-  --card: #16212b;
-  --border: #26333d;
-  --shadow: 0 10px 24px rgba(0, 0, 0, .35);
+  --brand: var(--tello-light-blue);
+  --accent: var(--tello-light-green);
+  --ok: #4ade9b;
+  --danger: #ff6b6f;
+  --ink: #ede9f7;
+  --muted: #a79fc0;
+  --bg: #131020;
+  --card: #1c1830;
+  --border: #2e2847;
+  --shadow: 0 8px 24px rgba(0,0,0,.5);
 }
 
 /* 4. עיצוב ה-Header מחדש */
@@ -10814,16 +10817,22 @@ button, .btn, .menu-btn, select, input, textarea {
     --mobile-shadow: 0 14px 36px rgba(15, 23, 42, .10);
   }
 
+  [data-theme="dark"]{
+    --mobile-surface: linear-gradient(180deg, color-mix(in oklab, var(--card) 100%, white 6%) 0%, var(--card) 100%);
+    --mobile-stroke: var(--border);
+    --mobile-shadow: 0 14px 36px rgba(0, 0, 0, .4);
+  }
+
   body.mobile-ui{
     background:
-      radial-gradient(circle at top left, rgba(37, 99, 235, .10), transparent 34%),
-      radial-gradient(circle at top right, rgba(16, 185, 129, .08), transparent 28%),
-      linear-gradient(180deg, #eef5ff 0%, #f8fbff 52%, #f3fbf8 100%) !important;
+      radial-gradient(circle at top left, color-mix(in oklab, var(--brand) 12%, transparent), transparent 34%),
+      radial-gradient(circle at top right, color-mix(in oklab, var(--accent) 10%, transparent), transparent 28%),
+      var(--bg) !important;
   }
 
   body.mobile-ui header{
     padding-inline:12px !important;
-    box-shadow:0 10px 24px rgba(37, 99, 235, .16) !important;
+    box-shadow:0 10px 24px color-mix(in oklab, var(--brand) 20%, transparent) !important;
   }
 
   body.mobile-ui #btnTheme,
