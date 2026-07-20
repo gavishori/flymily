@@ -352,9 +352,11 @@ body[data-mobile-active-view="overview"] .bottom-nav-item[data-nav="mix"]{
   .bottom-nav-item{ transition: none; }
 }
 
-/* The old mobile hamburger next to the sort control is now redundant -
-   the bottom bar's "עוד" opens the same drawer for the rest. */
-body.mobile-ui #mobileOverviewNavBtn{ display: none !important; }
+/* The old mobile hamburger triggers are now redundant on mobile - the
+   bottom bar's "עוד" opens the same drawer for the rest. Desktop still
+   uses #navDrawerToggleDesktop since it has no bottom bar. */
+body.mobile-ui #mobileOverviewNavBtn,
+body.mobile-ui #navDrawerToggleDesktop{ display: none !important; }
 
 @media (max-width: 820px){
   body.mobile-ui .container.trip-mode .tabview{

@@ -9068,13 +9068,7 @@ function renderCategoryBreakdownNode(targetId){
     }
 
     function isRowHidden(row){
-      if (!row) return false;
-      if (row.style.display === 'none') return true;
-      if (row.style.display === '') {
-        try{ return window.getComputedStyle(row).display === 'none'; }
-        catch(_){ return false; }
-      }
-      return false;
+      return !!(row && row.hidden);
     }
 
     function areAllCollapsed(){
@@ -9095,7 +9089,7 @@ function renderCategoryBreakdownNode(targetId){
 
     function setAllCollapsed(collapsed){
       getNotesRows().forEach(row => {
-        row.style.display = collapsed ? 'none' : '';
+        row.hidden = collapsed;
       });
       persistState();
       updateLabel();
@@ -9127,10 +9121,10 @@ function renderCategoryBreakdownNode(targetId){
 
       const currentlyHidden = isRowHidden(notesRow);
       if (areAllCollapsed() && currentlyHidden) {
-        getNotesRows().forEach(item => { item.style.display = 'none'; });
-        notesRow.style.display = '';
+        getNotesRows().forEach(item => { item.hidden = true; });
+        notesRow.hidden = false;
       } else {
-        notesRow.style.display = currentlyHidden ? '' : 'none';
+        notesRow.hidden = !currentlyHidden;
       }
 
       persistState();
