@@ -159,7 +159,6 @@ body{
   }
 
   body.mobile-ui #view-overview{
-    display:block !important;
     padding:0 0 18px !important;
   }
 

@@ -245,6 +245,42 @@ nav.tabs [aria-selected="true"], nav.tabs .active{
 #mobileOverviewMenuBtn{ display:none !important; }
 .mobile-section-menu-btn{ display:none !important; }
 
+/* ---------- Hero-style budget summary bar (mobile) ----------
+   The mobile budget bar (trigger + currency pill + progress) is repurposed
+   into a bold gradient hero card instead of the plain bordered pills it had
+   before - matches the html-prefix specificity of the existing bordered
+   variants (style.css:9276-9316 / :14135-14163) so it wins the later-file
+   tie without needing to touch the many !important declarations there. */
+@media (max-width: 820px){
+  html #expenseSummary.budget-bar-mobile > .budget-summary-trigger,
+  html #expenseSummary.budget-bar-mobile > .budget-currency-pill{
+    background: linear-gradient(135deg, var(--brand), color-mix(in oklab, var(--brand) 65%, var(--accent))) !important;
+    color: #fff !important;
+    border: none !important;
+    box-shadow: var(--shadow-md) !important;
+  }
+  html #expenseSummary.budget-bar-mobile .budget-progress{
+    background: var(--card) !important;
+    border: none !important;
+    box-shadow: var(--shadow-sm) !important;
+  }
+  html #expenseSummary.budget-bar-mobile .budget-progress .track{
+    height: 14px !important;
+    border-radius: var(--radius-pill) !important;
+    background: color-mix(in oklab, var(--brand) 14%, var(--bg)) !important;
+    overflow: hidden !important;
+  }
+  html #expenseSummary.budget-bar-mobile .budget-progress .fill{
+    background: linear-gradient(90deg, var(--brand), var(--accent)) !important;
+    border-radius: var(--radius-pill) !important;
+  }
+  html #expenseSummary.budget-bar-mobile .budget-progress .pct{
+    font-size: 1.15rem !important;
+    font-weight: 800 !important;
+    color: var(--brand) !important;
+  }
+}
+
 /* ---------- Trip status filter buttons + status pill on trip cards ---------- */
 #tripStatusActions{ flex-wrap: wrap; }
 #tripStatusActions .btn.active{
@@ -282,6 +318,48 @@ html body .expense-detail-surface{
   width: 100% !important;
   max-width: 100% !important;
   box-sizing: border-box !important;
+}
+
+/* ---------- Bottom tab bar (mobile primary navigation) ----------
+   Replaces the top hamburger as the main way to switch sections on
+   mobile - a native-app bottom bar instead of a slide-out drawer feels
+   like a genuinely different navigation pattern, not just new colors.
+   The drawer/hamburger mechanism stays intact underneath (desktop still
+   uses it; "עוד" here just opens the same drawer for less-common items). */
+.bottom-nav{
+  position: fixed; bottom: 0; inset-inline: 0; z-index: 500;
+  display: flex; justify-content: space-around; align-items: stretch;
+  background: var(--card);
+  border-top: 1px solid var(--border);
+  box-shadow: 0 -6px 24px rgba(0,0,0,.10);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.bottom-nav-item{
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 2px; padding: 8px 4px 6px; border: none; background: transparent; cursor: pointer;
+  color: var(--muted); font-size: 11px; font-weight: 600;
+  transition: color var(--dur) var(--ease), transform var(--dur) var(--ease);
+}
+.bottom-nav-item:active{ transform: scale(.9); }
+.bottom-nav-icon{ font-size: 21px; line-height: 1; }
+body[data-mobile-active-view="journal"] .bottom-nav-item[data-nav="journal"],
+body[data-mobile-active-view="expenses"] .bottom-nav-item[data-nav="expenses"],
+body[data-mobile-active-view="map"] .bottom-nav-item[data-nav="map"],
+body[data-mobile-active-view="overview"] .bottom-nav-item[data-nav="mix"]{
+  color: var(--brand);
+}
+@media (prefers-reduced-motion: reduce){
+  .bottom-nav-item{ transition: none; }
+}
+
+/* The old mobile hamburger next to the sort control is now redundant -
+   the bottom bar's "עוד" opens the same drawer for the rest. */
+body.mobile-ui #mobileOverviewNavBtn{ display: none !important; }
+
+@media (max-width: 820px){
+  body.mobile-ui .container.trip-mode .tabview{
+    padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px)) !important;
+  }
 }
 
 /* ---------- Trip list controls: one row instead of three stacked ----------

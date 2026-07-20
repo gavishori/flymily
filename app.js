@@ -559,6 +559,18 @@ document.addEventListener('click', (ev)=>{
   openNavDrawer();
 });
 
+// Bottom tab bar (mobile primary navigation) - reuses the same
+// applyOverviewSelection() the drawer items use, so both stay in sync;
+// "more" just opens the same drawer for the less-frequent sections.
+document.addEventListener('click', (ev)=>{
+  const btn = ev.target && ev.target.closest ? ev.target.closest('#mobileBottomNav [data-nav]') : null;
+  if(!btn) return;
+  ev.preventDefault();
+  const nav = btn.dataset.nav;
+  if(nav === 'more'){ openNavDrawer(); return; }
+  if(typeof applyOverviewSelection === 'function') applyOverviewSelection(nav);
+});
+
 (function wireNavDrawer(){
   function wire(){
     const drawer = document.getElementById('navDrawer');
@@ -2246,6 +2258,8 @@ function enterHomeMode(){
   $('#btnAllTrips').style.display = 'none';
   const navToggle = document.getElementById('navDrawerToggle');
   if(navToggle) navToggle.style.display = 'none';
+  const bottomNav = document.getElementById('mobileBottomNav');
+  if(bottomNav) bottomNav.style.display = 'none';
   state.currentTripId = null;
   updateHeaderDestination();
   showView('welcome');
@@ -2259,6 +2273,8 @@ function enterTripMode(){
   $('#btnAllTrips').style.display = 'inline-block';
   const navToggle = document.getElementById('navDrawerToggle');
   if(navToggle) navToggle.style.display = 'inline-flex';
+  const bottomNav = document.getElementById('mobileBottomNav');
+  if(bottomNav) bottomNav.style.display = (typeof isMobileViewport === 'function' && isMobileViewport()) ? 'flex' : 'none';
   updateHeaderDestination();
 }
 
