@@ -5327,12 +5327,26 @@ function getCountryMeta(value){
   const clean = _cleanCountryLabel(value);
   return { key, label: clean, capital: clean };
 }
+function _textContainsAliasAsWord(text, alias){
+  // Plain .includes() lets a short alias match inside an unrelated longer
+  // word (e.g. the China alias "סין" matching inside "קפריסין"/Cyprus).
+  // \b word boundaries don't work for Hebrew (\w only covers ASCII), so
+  // boundaries are checked manually: the alias must not be immediately
+  // preceded/followed by another Hebrew letter.
+  if(!text || !alias) return false;
+  const escaped = alias.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  try{
+    return new RegExp('(?<![א-ת])' + escaped + '(?![א-ת])').test(text);
+  }catch(_){
+    return text.includes(alias);
+  }
+}
 function getUsStateKeyFromText(raw){
   const text = normalizePlaceKey(raw);
   if(!text) return '';
   const entries = Object.entries(usStateAliasMap).sort((a,b)=> b[0].length - a[0].length);
   for(const [alias, key] of entries){
-    if(text === alias || text.includes(alias)) return key;
+    if(text === alias || _textContainsAliasAsWord(text, alias)) return key;
   }
   return '';
 }
@@ -5365,7 +5379,7 @@ function extractCountriesFromDestination(raw){
   parts.forEach(part=>{
     const normalizedPart = normalizePlaceKey(part);
     for(const [alias, key] of aliasEntries){
-      if(normalizedPart === alias || normalizedPart.includes(alias)){
+      if(normalizedPart === alias || _textContainsAliasAsWord(normalizedPart, alias)){
         const meta = countryCapitalMap[key] || { label: part, capital: part };
         found.set(key, { key, country: meta.label, capital: meta.capital });
       }
