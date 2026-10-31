@@ -65,7 +65,7 @@ function googleFlightsUrl(q) {
 }
 
 function airlineLinks() {
-  return AIRLINES.map(([name, url]) => `<a class="fl-airline-link" href="${url}" target="_blank" rel="noopener">${esc(name)}</a>`).join('');
+  return AIRLINES.map(([name, url]) => `<a class="fl-airline-link no-link-icon" href="${url}" target="_blank" rel="noopener">${esc(name)}</a>`).join('');
 }
 
 function legRow(leg, label) {
@@ -289,6 +289,8 @@ async function runSearch(ev) {
   if (q.infants > q.adults) { status.textContent = 'כל תינוק צריך מבוגר אחד לפחות.'; return; }
 
   const params = new URLSearchParams({ ...q, tricks: $('flTricks').checked ? '1' : '0', stream: '1' });
+  if ($('flDepartTime').value) params.set('departTimes', $('flDepartTime').value);
+  if ($('flReturnTime').value) params.set('returnTimes', $('flReturnTime').value);
   const button = $('flSubmit');
   button.disabled = true;
   document.body.dataset.flightSearch = 'running';

@@ -237,3 +237,6 @@ body[data-flight-search="running"] #homeTabs [data-home-tab="flights"]::after{
 @media (prefers-reduced-motion: reduce){
   .fl-step[data-state="active"] .fl-step-mark{ animation: none; }
 }
+
+/* ---------- Takeoff time filters ---------- */
+.fl-form label:has(#flDepartTime), .fl-form label:has(#flReturnTime){ grid-column: span 3; }

@@ -1448,9 +1448,18 @@ function toast(msg){ const t=document.getElementById('toast'); if(!t) { alert(ms
 
 // === Currency conversion helpers ===
 
+// Used only until a real rate arrives, and flagged so it's replaced. Older versions saved 3.7/0.92 without
+// a flag when the rate service failed, which is why those exact values also count as a placeholder.
+const PLACEHOLDER_RATES = { USDILS: 3.1, USDEUR: 0.9, estimated: true };
+function isPlaceholderRates(r){
+  if(!r || r.estimated) return true;
+  const ils = Number(r.USDILS), eur = Number(r.USDEUR);
+  return !ils || !eur || (ils === 3.7 && eur === 0.92);
+}
+
 function rateMatrix(r){
-  const USDEUR = Number((r && r.USDEUR) ?? (state?.rates?.USDEUR) ?? 0.92);
-  const USDILS = Number((r && r.USDILS) ?? (state?.rates?.USDILS) ?? 3.7);
+  const USDEUR = Number((r && r.USDEUR) ?? (state?.rates?.USDEUR) ?? PLACEHOLDER_RATES.USDEUR);
+  const USDILS = Number((r && r.USDILS) ?? (state?.rates?.USDILS) ?? PLACEHOLDER_RATES.USDILS);
   const USDLocal = Number((r && r.USDLocal) ?? (state?.rates?.USDLocal) ?? 1);
   const LC = state.current?.localCurrency;
   const lcSpread = (LC && !['USD', 'EUR', 'ILS'].includes(LC)) ? { [LC]: USDLocal } : {};
@@ -1477,26 +1486,74 @@ function convertAmount(amount, from, to, rates){
   if(!M[from] || !M[from][to]) return a; // graceful fallback
   return a * M[from][to];
 }
-// === Fetch live USD rates once and lock ===
-async function fetchRatesOnce(){
-  try{
-    const localCur = state.current?.localCurrency;
-    // סינון כפילויות ומניעת שליחת USD כערך יעד כדי למנוע שגיאה 400
-    const to = [...new Set(['ILS', 'EUR', localCur].filter(c => c && c !== 'USD'))];
-    const r = await fetch(`https://api.frankfurter.app/latest?from=USD&to=${to.join(',')}`);
-    const d = await r.json();
-    
-    const USDILS = Number(d?.rates?.ILS);
-    const USDEUR = Number(d?.rates?.EUR);
-    const USDLocal = (localCur) ? Number(d?.rates?.[localCur]) : null;
-    
-    if(USDILS && USDEUR){
-      const rates = { USDILS, USDEUR, lockedAt: new Date().toISOString() };
-      if(USDLocal) rates.USDLocal = USDLocal;
-      return rates;
+// === Fetch USD rates and lock them ===
+const fxCache = new Map();
+
+async function fetchFx(query){
+  for(let attempt = 0; attempt < 2; attempt++){
+    try{
+      const r = await fetch(`https://api.frankfurter.dev/v1/${query}`);
+      if(r.ok) return (await r.json()).rates;
+    }catch(e){ console.error("Rates fetch failed:", e); }
+  }
+  return null;
+}
+
+// day: 'latest' or YYYY-MM-DD. null when the service can't answer. The local currency is asked for
+// separately, because a currency the service doesn't carry fails the whole request.
+async function fetchRates(day = 'latest'){
+  const localCur = state.current?.localCurrency;
+  const key = `${day}|${localCur || ''}`;
+  if(fxCache.has(key)) return { ...fxCache.get(key) };
+
+  const base = await fetchFx(`${day}?from=USD&to=ILS,EUR`);
+  if(!Number(base?.ILS) || !Number(base?.EUR)) return null;
+  const rates = { USDILS: base.ILS, USDEUR: base.EUR, lockedAt: new Date().toISOString() };
+  if(localCur && !['USD','EUR','ILS'].includes(localCur)){
+    const local = await fetchFx(`${day}?from=USD&to=${localCur}`);
+    if(Number(local?.[localCur])) rates.USDLocal = local[localCur];
+  }
+  fxCache.set(key, rates);
+  return { ...rates };
+}
+
+async function fetchRatesOnce(day){
+  const rates = await fetchRates(day);
+  if(rates) return rates;
+  toast('לא הצלחנו להביא שער מטבע. נשתמש בהערכה ונעדכן בפתיחה הבאה של הנסיעה');
+  return { ...PLACEHOLDER_RATES, lockedAt: new Date().toISOString() };
+}
+
+// The rate service has a rate per day; a future expense takes the latest one
+function rateDayOf(iso){
+  const d = new Date(iso || Date.now());
+  if(isNaN(d) || d > new Date()) return 'latest';
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+// Replace placeholder rates saved on a trip and its expenses with the real rate of each expense's day.
+// Rates that were really fetched stay as they are. Returns the replacements.
+async function repairPlaceholderRates(rawTrip, ref){
+  if(state.shared?.readOnly) return null;
+  const fixed = { expenses: {}, trip: null };
+  const patch = {};
+  const expenses = rawTrip.expenses;
+  if(expenses && !Array.isArray(expenses)){
+    for(const [id, e] of Object.entries(expenses)){
+      if(!isPlaceholderRates(e?.rates)) continue;
+      const rates = await fetchRates(rateDayOf(e?.dateIso || e?.createdAt));
+      if(!rates) continue;
+      fixed.expenses[id] = rates;
+      patch[`expenses.${id}.rates`] = rates;
     }
-  }catch(e){ console.error("Rates fetch failed:", e); }
-  return { USDILS: 3.7, USDEUR: 0.92, lockedAt: new Date().toISOString() };
+  }
+  if(isPlaceholderRates(rawTrip.rates)){
+    fixed.trip = await fetchRates();
+    if(fixed.trip) patch.rates = fixed.trip;
+  }
+  if(!Object.keys(patch).length) return null;
+  await FB.updateDoc(ref, patch);
+  return fixed;
 }
 var state = globalThis.state || (globalThis.state = {});
 try { window.state = state; } catch(_) {}
@@ -2184,7 +2241,7 @@ state = Object.assign(state, {
   currentTripId: state.currentTripId ?? null,
   viewMode: state.viewMode ?? 'grid',
   lastNonMapView: state.lastNonMapView ?? 'grid',
-  rates: state.rates ?? { USDEUR: 0.92, USDILS: 3.7 },
+  rates: state.rates ?? { USDEUR: 0.9, USDILS: 3.1, estimated: true },
   maps: state.maps ?? { mini: null, big: null, home: null, layers: { expenses: null, journal: null }, select: null, selectMarker: null, currentModal: null },
   shared: state.shared ?? { enabled: false, token: null, readOnly: false },
   filters: state.filters ?? {},
@@ -3166,10 +3223,9 @@ function getLocalCurrency(destination){
 
 function normalizeRatesShape(rates){
   const src = (rates && typeof rates === 'object') ? rates : {};
-  const out = {
-    USDILS: Number(src.USDILS ?? state?.rates?.USDILS ?? 3.7) || 3.7,
-    USDEUR: Number(src.USDEUR ?? state?.rates?.USDEUR ?? 0.92) || 0.92
-  };
+  const known = !isPlaceholderRates(src) ? src : (!isPlaceholderRates(state?.rates) ? state.rates : PLACEHOLDER_RATES);
+  const out = { USDILS: Number(known.USDILS), USDEUR: Number(known.USDEUR) };
+  if (known !== src) out.estimated = true;
   const usdLocal = Number(src.USDLocal);
   if (isFinite(usdLocal) && usdLocal > 0) out.USDLocal = usdLocal;
   if (src.lockedAt) out.lockedAt = src.lockedAt;
@@ -3220,7 +3276,7 @@ async function backfillTripVersionFields(trip){
     const patch = {};
     if (!trip.localCurrency && normalized.localCurrency) patch.localCurrency = normalized.localCurrency;
     if (!trip.budget || typeof trip.budget !== 'object') patch.budget = normalized.budget;
-    if (!trip.rates || !Number(trip.rates?.USDILS) || !Number(trip.rates?.USDEUR)) patch.rates = normalized.rates;
+    if ((!trip.rates || !Number(trip.rates?.USDILS) || !Number(trip.rates?.USDEUR)) && !normalized.rates.estimated) patch.rates = normalized.rates;
     if (!Object.keys(patch).length) return;
     const ref = FB.doc(db, 'trips', trip.id);
     await FB.updateDoc(ref, patch);
@@ -3314,7 +3370,7 @@ async function loadTrip(){
   state.current.localCurrency = inferredLocalCurrency;
 
   let effectiveRates = (t.rates && typeof t.rates === 'object') ? { ...t.rates } : null;
-  const missingBaseRates = !effectiveRates || !Number(effectiveRates.USDILS) || !Number(effectiveRates.USDEUR);
+  const missingBaseRates = isPlaceholderRates(effectiveRates);
   if (effectiveRates) state.rates = effectiveRates;
   ensureExpenseCurrencyOption();
 
@@ -3411,10 +3467,28 @@ async function loadTrip(){
     try{ await enrichLegacyExpenses(t); }catch(_){ }
 
     try{
+      const fixed = await repairPlaceholderRates(rawTrip, ref);
+      if(fixed && state.currentTripId === t.id){
+        for(const [id, rates] of Object.entries(fixed.expenses)){
+          if(t.expenses?.[id]) t.expenses[id].rates = rates;
+        }
+        if(fixed.trip){
+          backgroundRates = fixed.trip;
+          t.rates = fixed.trip;
+          state.rates = fixed.trip;
+        }
+        saveTripCache(state.user?.uid, t);
+        renderExpenseSummary(t);
+        renderExpensesNow();
+        renderOverviewNow();
+      }
+    }catch(e){ console.warn('rate repair failed', e); }
+
+    try{
       const patch = {};
       if (!rawTrip.localCurrency && inferredLocalCurrency) patch.localCurrency = inferredLocalCurrency;
       if (!rawTrip.budget || typeof rawTrip.budget !== 'object') patch.budget = t.budget;
-      if (backgroundRates && missingBaseRates) patch.rates = backgroundRates;
+      if (backgroundRates && missingBaseRates && !backgroundRates.estimated) patch.rates = backgroundRates;
       if (Object.keys(patch).length) await FB.updateDoc(ref, patch);
     }catch(_){}
 
@@ -3898,8 +3972,7 @@ $('#tripSave').addEventListener('click', async ()=>{
     const live = await fetchRatesOnce();
     try{ state.current = _prevCurrent; }catch(_){}
 
-    const lockedRates = { USDILS: live.USDILS, USDEUR: live.USDEUR, lockedAt: live.lockedAt };
-    if (localCur && live.USDLocal) lockedRates.USDLocal = live.USDLocal;
+    const lockedRates = { ...live };
 
     await FB.setDoc(FB.doc(db, 'trips', id), {
       ownerUid: state.user.uid, // עכשיו בטוח לגשת ל-uid
@@ -3988,9 +4061,7 @@ $('#btnBudgetEdit').addEventListener('click', async ()=>{
   const locking = !btn.classList.contains('locked');
   const ref = FB.doc(db, 'trips', state.currentTripId);
   const budget = { USD: parseIntSafe($('#bUSD').value), EUR: parseIntSafe($('#bEUR').value), ILS: parseIntSafe($('#bILS').value) };
-  const live = await fetchRatesOnce();
-  const lockedRates = { USDILS: live.USDILS, USDEUR: live.USDEUR, lockedAt: live.lockedAt };
-  if (live.USDLocal) lockedRates.USDLocal = live.USDLocal;
+  const lockedRates = await fetchRatesOnce();
   await FB.updateDoc(ref, { budget, rates: lockedRates, budgetLocked: locking });
   ['bUSD','bEUR','bILS'].forEach(id=> $('#'+id).disabled = locking);
   btn.classList.toggle('locked', locking);
@@ -4252,10 +4323,7 @@ async function saveExpense(){
   const snap = await FB.getDoc(ref);
   const t    = snap.exists() ? (snap.data()||{}) : {};
 
-  const live = await fetchRatesOnce();
   const currentExpense = t.expenses?.[$('#expenseModal').dataset.id] || {};
-  const expenseRates = currentExpense.rates || { USDILS: live.USDILS, USDEUR: live.USDEUR, lockedAt: live.lockedAt };
-  if(live.USDLocal) expenseRates.USDLocal = live.USDLocal;
 
   const $expD = document.getElementById('expDate');
   const $expT = document.getElementById('expTime');
@@ -4267,6 +4335,11 @@ async function saveExpense(){
     const curE = (t.expenses && t.expenses[$('#expenseModal')?.dataset?.id || '']) || {};
     _exp_dateIso = curE.dateIso || curE.createdAt || new Date().toISOString();
   }
+  // A saved rate stays locked unless it was a placeholder or the expense moved to another day
+  const sameDay = rateDayOf(currentExpense.dateIso || currentExpense.createdAt) === rateDayOf(_exp_dateIso);
+  const expenseRates = (currentExpense.rates && !isPlaceholderRates(currentExpense.rates) && sameDay)
+    ? currentExpense.rates
+    : await fetchRatesOnce(rateDayOf(_exp_dateIso));
   const __exp_dt = new Date(_exp_dateIso);
   const __pad = n=>String(n).padStart(2,'0');
   const __exp_dateStr = `${__pad(__exp_dt.getDate())}/${__pad(__exp_dt.getMonth()+1)}/${__exp_dt.getFullYear()}`;
@@ -6173,13 +6246,7 @@ async function saveMetaChanges() {
             ILS: parseIntSafe($('#bILS').value)
         };
 
-        const live = await fetchRatesOnce();
-        const lockedRates = {
-            USDILS: Number(live?.USDILS) || Number(state.rates?.USDILS) || 3.7,
-            USDEUR: Number(live?.USDEUR) || Number(state.rates?.USDEUR) || 0.92,
-            lockedAt: live?.lockedAt || new Date().toISOString()
-        };
-        if (live?.USDLocal) lockedRates.USDLocal = live.USDLocal;
+        const lockedRates = await fetchRatesOnce();
 
         await FB.updateDoc(ref, {
             destination,

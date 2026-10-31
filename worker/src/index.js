@@ -3,6 +3,7 @@
 // Google Flights engine for live prices, keeps only flights the airline itself sells, and returns JSON.
 //
 // GET /search?to=LHR,LGW&depart=2026-12-01&return=2026-12-08&adults=2&children=0&infants=0&tricks=1
+//     optional departTimes=5,11 and returnTimes=18,23: first and last takeoff hour on each direction
 //   → { results, tricks, insights, hiddenAgentOnly, searchesLeft }
 //   With &stream=1 the answer is one JSON object per line: { stage, done, total, final } while it works,
 //   then { result } or { error }.
@@ -78,6 +79,11 @@ function readQuery(url) {
   const back = p.get("return") || "";
   if (!/^\d{4}-\d{2}-\d{2}$/.test(depart)) throw new BadRequest("depart");
   if (back && (!/^\d{4}-\d{2}-\d{2}$/.test(back) || back < depart)) throw new BadRequest("return");
+  const hours = (name) => {
+    const value = p.get(name) || "";
+    if (value && !/^([01]?\d|2[0-3]),([01]?\d|2[0-3])$/.test(value)) throw new BadRequest(name);
+    return value;
+  };
   const count = (name, min, max) => {
     const n = parseInt(p.get(name) || String(min), 10);
     if (!(n >= min && n <= max)) throw new BadRequest(name);
@@ -85,6 +91,8 @@ function readQuery(url) {
   };
   return {
     to, depart, back,
+    departTimes: hours("departTimes"),
+    returnTimes: hours("returnTimes"),
     adults: count("adults", 1, 9),
     children: count("children", 0, 8),
     infants: count("infants", 0, 4),
@@ -126,8 +134,8 @@ async function search(q, env, report = () => {}) {
 
   report("search", 0, searches);
   const [out, back, roundTrip] = await Promise.all([
-    counted(oneWay(ORIGIN_AIRPORT, q.to, q.depart, q, env)),
-    q.back ? counted(oneWay(q.to, ORIGIN_AIRPORT, q.back, q, env)) : null,
+    counted(oneWay(ORIGIN_AIRPORT, q.to, q.depart, q.departTimes, q, env)),
+    q.back ? counted(oneWay(q.to, ORIGIN_AIRPORT, q.back, q.returnTimes, q, env)) : null,
     q.back ? counted(serp(roundTripParams(q), env)) : null,
   ]);
 
@@ -157,15 +165,19 @@ function baseParams(q) {
 }
 
 function roundTripParams(q) {
-  return { ...baseParams(q), type: 1, departure_id: ORIGIN_AIRPORT, arrival_id: q.to, outbound_date: q.depart, return_date: q.back };
+  return {
+    ...baseParams(q), type: 1, departure_id: ORIGIN_AIRPORT, arrival_id: q.to, outbound_date: q.depart, return_date: q.back,
+    ...(q.departTimes && { outbound_times: q.departTimes }),
+    ...(q.returnTimes && { return_times: q.returnTimes }),
+  };
 }
 
-function oneWayParams(from, to, date, q) {
-  return { ...baseParams(q), type: 2, departure_id: from, arrival_id: to, outbound_date: date };
+function oneWayParams(from, to, date, q, times = "") {
+  return { ...baseParams(q), type: 2, departure_id: from, arrival_id: to, outbound_date: date, ...(times && { outbound_times: times }) };
 }
 
-async function oneWay(from, to, date, q, env) {
-  const raw = await serp(oneWayParams(from, to, date, q), env);
+async function oneWay(from, to, date, times, q, env) {
+  const raw = await serp(oneWayParams(from, to, date, q, times), env);
   return { raw, flights: readFlights(raw).slice(0, LEG_POOL) };
 }
 
@@ -315,7 +327,7 @@ async function findTricks(q, outbound, inbound, env, report) {
 
   report("tricks", 0, lookups);
   const outward = async () => {
-    const toHub = await lookup(oneWayParams(ORIGIN_AIRPORT, hubs.join(","), q.depart, q));
+    const toHub = await lookup(oneWayParams(ORIGIN_AIRPORT, hubs.join(","), q.depart, q, q.departTimes));
     await Promise.all(cheapestPerHub(toHub, l => l.to).map(async firstLeg => {
       const onward = await lookup(oneWayParams(firstLeg.to, q.to, q.depart, q));
       pushTrick(tricks, "out", firstLeg.to, firstLeg, onward, outbound);
@@ -324,7 +336,7 @@ async function findTricks(q, outbound, inbound, env, report) {
   const homeward = async () => {
     const fromHub = await lookup(oneWayParams(hubs.join(","), ORIGIN_AIRPORT, q.back, q));
     await Promise.all(cheapestPerHub(fromHub, l => l.from).map(async lastLeg => {
-      const toHubBack = await lookup(oneWayParams(q.to, lastLeg.from, q.back, q));
+      const toHubBack = await lookup(oneWayParams(q.to, lastLeg.from, q.back, q, q.returnTimes));
       pushTrick(tricks, "back", lastLeg.from, null, toHubBack, inbound, lastLeg);
     }));
   };
