@@ -84,4 +84,5 @@ Deploy by replacing the existing project files with these files.
   npx wrangler deploy
   npx wrangler secret put SERPAPI_KEY
 
-מכסה: חיפוש חדש הלוך-חזור עולה בערך 9 שאילתות, ועם טריקים עד 13. חיפוש זהה בתוך שעה חינם.
+מכסה: חיפוש חדש הלוך-חזור עולה בערך 9 שאילתות, ועם טריקים עד 19. חיפוש זהה בתוך שעה חינם
+(המטמון של SerpApi). ב-Worker אין מטמון נוסף: קריאות Cache נספרות במגבלת 50 הבקשות של Cloudflare.
