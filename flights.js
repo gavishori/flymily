@@ -89,12 +89,6 @@ function findDestination(text) {
   return null;
 }
 
-function googleFlightsUrl(q) {
-  const code = q.to.split(',')[0];
-  const words = `Flights from TLV to ${code} on ${q.depart}` + (q.return ? ` through ${q.return}` : ' one way');
-  return `https://www.google.com/travel/flights?hl=iw&curr=ILS&q=${encodeURIComponent(words)}`;
-}
-
 function airlineLinks() {
   return AIRLINES.map(([name, url]) => `<a class="fl-airline-link no-link-icon" href="${url}" target="_blank" rel="noopener">${esc(name)}</a>`).join('');
 }
@@ -113,13 +107,19 @@ function legRow(leg, label) {
   </div>`;
 }
 
-function bookButton(offer) {
+function bagNote(offer) {
+  if (offer.bag === 'included') return 'מזוודה רשומה כלולה';
+  if (offer.bag === 'fee') return `מזוודות: +${money(offer.bagCost)} (כלול בסה״כ)`;
+  return 'מחיר המזוודה לא ידוע, בדקו באתר החברה';
+}
+
+function bookButton(offer, q) {
   const fields = new URLSearchParams(offer.postData || '');
   const inputs = [...fields].map(([k, v]) => `<input type="hidden" name="${esc(k)}" value="${esc(v)}">`).join('');
+  const notes = [offer.fare, q.bag ? bagNote(offer) : offer.bags?.join(' · '), q.flex ? offer.conditions?.join(' · ') : ''].filter(Boolean);
   return `<form class="fl-book" action="${esc(offer.url)}" method="post" target="_blank" rel="noopener noreferrer">${inputs}
     <button class="btn primary" type="submit">להזמנה באתר ${esc(offer.seller)} · ${money(offer.price)}</button>
-    ${offer.fare ? `<span class="muted">${esc(offer.fare)}</span>` : ''}
-    ${offer.bags?.length ? `<span class="muted">${esc(offer.bags.join(' · '))}</span>` : ''}
+    ${notes.map((n) => `<span class="muted">${esc(n)}</span>`).join('')}
   </form>`;
 }
 
@@ -129,10 +129,7 @@ function resultCard(r, rank, q) {
   const airlines = new Set(r.legs.flatMap((l) => l.airlines));
   const badge = r.type === 'round-trip' ? 'כרטיס הלוך־חזור אחד'
     : r.type === 'two-tickets' ? (airlines.size > 1 ? 'שילוב שתי חברות' : 'שני כרטיסים') : 'כיוון אחד';
-  const actions = r.verified
-    ? r.offers.map(bookButton).join('')
-    : `<a class="btn" href="${esc(googleFlightsUrl(q))}" target="_blank" rel="noopener">לבדיקה ב־Google Flights</a>
-       <span class="muted">לא הספקנו לאמת שהחברה מוכרת במחיר הזה</span>`;
+  const actions = r.offers.map((o) => bookButton(o, q)).join('');
   return `<article class="fl-card">
     <div class="fl-card-head">
       <span class="fl-rank">${rank}</span>
@@ -140,7 +137,7 @@ function resultCard(r, rank, q) {
         <div class="fl-price">${money(r.total)}</div>
         <div class="muted">${passengers > 1 ? `סה״כ ל־${passengers} נוסעים · ` : ''}${esc(badge)}</div>
       </div>
-      ${r.verified ? '<span class="fl-verified">מחיר ישיר מהחברה ✓</span>' : ''}
+      <span class="fl-verified">מחיר ישיר מהחברה ✓</span>
     </div>
     ${r.legs.map((l, i) => legRow(l, labels[i])).join('')}
     <div class="fl-actions">${actions}</div>
@@ -149,19 +146,17 @@ function resultCard(r, rank, q) {
 
 function trickCard(t, q) {
   const direction = t.direction === 'out' ? 'הלוך' : 'חזור';
-  const body = t.legs.map((l, i) => {
-    const data = { token: l.token, from: l.from, to: l.to, depart: t.direction === 'out' ? q.depart : q.return };
-    return `<div class="fl-trick-leg">${legRow(l, `קטע ${i + 1}`)}
-      <button class="btn fl-trick-check" type="button" data-leg="${esc(JSON.stringify(data))}" ${l.token ? '' : 'disabled'}>מחיר באתר החברה</button>
-    </div>`;
-  }).join('');
   const saving = t.saving ? ` · חיסכון ${money(t.saving)}` : '';
   return `<article class="fl-card fl-trick">
-    <div class="fl-card-head"><div>
-      <div class="fl-price">${money(t.total)}</div>
-      <div class="muted">${direction} דרך ${esc(t.hub)} בשני כרטיסים${saving}</div>
-    </div></div>
-    ${body}
+    <div class="fl-card-head">
+      <div>
+        <div class="fl-price">${money(t.total)}</div>
+        <div class="muted">${direction} דרך ${esc(t.hub)} בשני כרטיסים${saving}</div>
+      </div>
+      <span class="fl-verified">מחיר ישיר מהחברות ✓</span>
+    </div>
+    ${t.legs.map((l, i) => legRow(l, `קטע ${i + 1}`)).join('')}
+    <div class="fl-actions">${t.offers.map((o) => bookButton(o, q)).join('')}</div>
   </article>`;
 }
 
@@ -180,6 +175,8 @@ function recommendations(data, q) {
   if (best?.legs.some((l) => l.stops?.some((s) => s.overnight))) tips.push('בזולה ביותר יש עצירת לילה. בדקו אם הלינה מכסה את החיסכון.');
   if (data.tricks?.length) tips.push(`נמצא טריק: טיסה עם כרטיסים נפרדים דרך ${esc(data.tricks[0].hub)} חוסכת עד ${money(data.tricks[0].saving || 0)}.`);
   if (data.hiddenAgentOnly) tips.push(`הסתרנו ${data.hiddenAgentOnly} טיסות שנמכרות רק דרך סוכנים.`);
+  if (data.hiddenByTerms) tips.push(`הסתרנו ${data.hiddenByTerms} טיסות בלי אישור לתנאים שבחרתם. לרוב החברה לא מפרסמת את התנאים במקור שלנו, אז כדאי לבדוק באתר שלה.`);
+  if (data.hiddenUnchecked) tips.push(`${data.hiddenUnchecked} טיסות יקרות יותר לא הוצגו כי לא אימתנו שהחברה מוכרת אותן.`);
   return [...tips, ...STATIC_TIPS];
 }
 
@@ -299,10 +296,9 @@ function showResults(data, q, dest) {
     <div class="fl-airlines">${airlineLinks()}</div>`;
 }
 
-function showFallback(q, message) {
+function showFallback(message) {
   $('flResults').innerHTML = `<div class="fl-notice"><strong>${esc(message)}</strong>
-      <p class="muted">בינתיים אפשר לבדוק את אותו חיפוש ב־Google Flights או ישירות אצל החברות.</p>
-      <a class="btn primary" href="${esc(googleFlightsUrl(q))}" target="_blank" rel="noopener">פתח ב־Google Flights</a>
+      <p class="muted">בינתיים אפשר לבדוק ישירות אצל החברות.</p>
     </div>
     <div class="fl-airlines">${airlineLinks()}</div>`;
 }
@@ -315,6 +311,7 @@ async function runSearch(ev) {
   const q = {
     to: dest.code, depart: $('flDepart').value, return: $('flReturn').value,
     adults: Number($('flAdults').value), children: Number($('flChildren').value), infants: Number($('flInfants').value),
+    bag: $('flBag').checked ? 1 : 0, flex: $('flFlex').checked ? 1 : 0,
   };
   if (!q.depart) { status.textContent = 'בחרו תאריך יציאה.'; return; }
   if (q.infants > q.adults) { status.textContent = 'כל תינוק צריך מבוגר אחד לפחות.'; return; }
@@ -334,11 +331,10 @@ async function runSearch(ev) {
     if (answer?.result) {
       showResults(answer.result, q, dest);
       failed = false;
-    } else if (answer?.error === 'no-key') showFallback(q, 'החיפוש החי עדיין לא חובר.');
-    else showFallback(q, 'החיפוש נכשל כרגע.');
+    } else showFallback('החיפוש נכשל כרגע.');
   } catch (e) {
     console.error('flight search failed', e);
-    showFallback(q, 'החיפוש החי לא זמין כרגע.');
+    showFallback('החיפוש החי לא זמין כרגע.');
   } finally {
     endProgress(failed);
     button.disabled = false;
@@ -366,22 +362,6 @@ function clearDoneDot() {
   delete document.body.dataset.flightSearch;
   setTitle('');
   drawProgressPill();
-}
-
-async function checkTrickLeg(btn) {
-  const leg = JSON.parse(btn.dataset.leg);
-  const passengers = { adults: $('flAdults').value, children: $('flChildren').value, infants: $('flInfants').value };
-  btn.disabled = true;
-  btn.textContent = 'בודק...';
-  try {
-    const r = await api(`/booking?${new URLSearchParams({ ...leg, ...passengers })}`);
-    const { offer } = await r.json();
-    btn.outerHTML = offer ? bookButton(offer) : '<span class="muted">נמכר רק דרך סוכנים</span>';
-  } catch (e) {
-    console.error('leg check failed', e);
-    btn.disabled = false;
-    btn.textContent = 'לא הצליח, נסו שוב';
-  }
 }
 
 function setHomeTab(tab) {
@@ -622,10 +602,6 @@ function init() {
   wireAutocomplete();
   wireCalendar();
   $('flightForm').addEventListener('submit', runSearch);
-  $('flResults').addEventListener('click', (ev) => {
-    const btn = ev.target.closest('.fl-trick-check');
-    if (btn) checkTrickLeg(btn);
-  });
   document.querySelectorAll('#homeTabs [data-home-tab]').forEach((b) => {
     b.addEventListener('click', () => setHomeTab(b.dataset.homeTab));
   });

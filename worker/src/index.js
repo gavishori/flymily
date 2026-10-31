@@ -1,13 +1,14 @@
 // Flight-search server for FLYMILY.
 // The site is static, so it can't read fares itself or hold a secret key. This Worker asks SerpApi's
 // Google Flights engine for live prices, keeps only flights the airline itself sells, and returns JSON.
+// Nothing an agent sells, and nothing that couldn't be confirmed as the airline's own offer, is ever returned.
 //
 // GET /search?to=LHR,LGW&depart=2026-12-01&return=2026-12-08&adults=2&children=0&infants=0&tricks=1
 //     optional departTimes=5,11 and returnTimes=18,23: first and last takeoff hour on each direction
-//   → { results, tricks, insights, hiddenAgentOnly, searchesLeft }
+//     optional bag=1 adds one checked bag per passenger; flex=1 keeps only fares with a free change or full refund
+//   → { results, tricks, insights, hiddenAgentOnly, hiddenByTerms, hiddenUnchecked, searchesLeft }
 //   With &stream=1 the answer is one JSON object per line: { stage, done, total, final } while it works,
 //   then { result } or { error }.
-// GET /booking?token=<booking_token>&from=ATH&to=LHR&depart=2026-12-01   →   the airline's own offer for one flight
 //
 // SERPAPI_KEY is a Worker secret: npx wrangler secret put SERPAPI_KEY
 
@@ -19,6 +20,8 @@ const RESULT_COUNT = 5;
 const LEG_POOL = 8;          // cheapest flights kept per direction before pairing them
 const MAX_LEG_REPEATS = 2;   // so the five results aren't one flight paired five ways
 const MAX_VERIFY_CALLS = 10; // each airline-price check costs one SerpApi search
+const MAX_VERIFY_CALLS_FLEX = 16; // most fares fail the free-change test, so more have to be checked
+const MAX_TRICKS = 2;        // each trick shown costs two airline checks
 const MIN_CONNECTION_MIN = 180;
 const MAX_CONNECTION_MIN = 20 * 60;
 
@@ -37,13 +40,6 @@ export default {
       if (url.pathname === "/search") {
         if (url.searchParams.get("stream") === "1") return streamSearch(query, env, ctx, headers);
         return reply(await search(query, env), 200, headers);
-      }
-      if (url.pathname === "/booking") {
-        const token = url.searchParams.get("token");
-        const from = (url.searchParams.get("from") || "").toUpperCase();
-        if (!token) throw new BadRequest("token");
-        if (!/^[A-Z]{3}$/.test(from)) throw new BadRequest("from");
-        return reply({ offer: await airlineOffer(token, oneWayParams(from, query.to, query.depart, query), env) }, 200, headers);
       }
       return reply({ error: "not-found" }, 404, headers);
     } catch (e) {
@@ -97,6 +93,8 @@ function readQuery(url) {
     children: count("children", 0, 8),
     infants: count("infants", 0, 4),
     tricks: p.get("tricks") === "1",
+    bag: p.get("bag") === "1",
+    flex: p.get("flex") === "1",
   };
 }
 
@@ -143,7 +141,7 @@ async function search(q, env, report = () => {}) {
     ? [...pairOneWays(out.flights, back.flights), ...roundTripCandidates(roundTrip)].sort(byPrice)
     : out.flights.map(f => ({ type: "oneway", total: f.price, legs: [f] }));
 
-  const [{ results, hiddenAgentOnly }, tricks] = await Promise.all([
+  const [{ results, hiddenAgentOnly, hiddenByTerms, hiddenUnchecked }, tricks] = await Promise.all([
     keepAirlineSold(candidates, q, env, report),
     q.tricks ? findTricks(q, out.flights, back?.flights, env, report) : [],
   ]);
@@ -152,6 +150,8 @@ async function search(q, env, report = () => {}) {
     results,
     tricks,
     hiddenAgentOnly,
+    hiddenByTerms,
+    hiddenUnchecked,
     insights: readInsights(roundTrip || out.raw),
     searchesLeft: await searchesLeft(env),
   };
@@ -231,11 +231,12 @@ function roundTripCandidates(raw) {
 }
 
 // Google's list price can be an agent's. Walk up from the cheapest, ask who actually sells each flight,
-// and keep the airline's own price; flights only agents sell are dropped.
+// and keep the airline's own price. A flight stays only once its airline is confirmed as the seller.
 async function keepAirlineSold(candidates, q, env, report) {
   const results = [];
   const offers = new Map();
-  let calls = 0, checked = 0, hiddenAgentOnly = 0;
+  const maxCalls = q.flex ? MAX_VERIFY_CALLS_FLEX : MAX_VERIFY_CALLS;
+  let calls = 0, checked = 0, hiddenAgentOnly = 0, hiddenByTerms = 0, hiddenUnchecked = 0;
   const countCheck = (value) => {
     report("verify", ++checked, calls);
     return value;
@@ -250,10 +251,10 @@ async function keepAirlineSold(candidates, q, env, report) {
     if (singleTicket || result.total < results[same].total) results[same] = result;
   };
 
-  const offerFor = (token, params) => {
+  const offerFor = (token, params, legs) => {
     if (!offers.has(token)) {
       calls++;
-      offers.set(token, airlineOffer(token, params, env).catch(() => undefined).then(countCheck));
+      offers.set(token, airlineOffer(token, params, q, env, legs).catch(() => undefined).then(countCheck));
     }
     return offers.get(token);
   };
@@ -263,38 +264,51 @@ async function keepAirlineSold(candidates, q, env, report) {
 
   // The cheapest will almost certainly be needed, so check them together instead of one by one
   for (const c of candidates.slice(0, RESULT_COUNT)) {
-    if (c.type !== "round-trip") c.legs.forEach((l, i) => { if (l.token) offerFor(l.token, legParams(l, i)); });
+    if (c.type !== "round-trip") c.legs.forEach((l, i) => { if (l.token) offerFor(l.token, legParams(l, i), 1); });
   }
 
   for (const candidate of candidates) {
     if (results.length >= RESULT_COUNT) break;
-    if (calls >= MAX_VERIFY_CALLS) { addResult({ ...candidate, verified: false }); continue; }
+    if (calls >= maxCalls) { hiddenUnchecked = candidates.length - candidates.indexOf(candidate); break; }
     if (candidate.type === "round-trip") {
       calls++;
       const returns = await serp({ ...roundTripParams(q), departure_token: candidate.legs[0].departureToken }, env).catch(() => null).then(countCheck);
       const cheapest = returns && readFlights(returns)[0];
-      if (!cheapest) { addResult({ ...candidate, verified: false }); continue; }
+      if (!cheapest) { hiddenUnchecked++; continue; }
       candidate.legs = [candidate.legs[0], cheapest];
     }
     const checks = candidate.type === "round-trip"
-      ? [[candidate.legs[1].token, roundTripParams(q)]]
-      : candidate.legs.map((l, i) => [l.token, legParams(l, i)]);
-    const found = await Promise.all(checks.map(([token, params]) => token ? offerFor(token, params) : undefined));
+      ? [[candidate.legs[1].token, roundTripParams(q), 2]]
+      : candidate.legs.map((l, i) => [l.token, legParams(l, i), 1]);
+    const found = await Promise.all(checks.map(([token, params, legs]) => token ? offerFor(token, params, legs) : undefined));
     if (found.includes(null)) { hiddenAgentOnly++; continue; }
-    if (found.includes(undefined)) { addResult({ ...candidate, verified: false }); continue; }
-    addResult({
-      ...candidate,
-      verified: true,
-      total: found.reduce((sum, o) => sum + o.price, 0),
-      offers: found,
-    });
+    if (found.includes(undefined)) { hiddenUnchecked++; continue; }
+    if (found.includes(false)) { hiddenByTerms++; continue; }
+    addResult({ ...candidate, verified: true, total: offersTotal(found), offers: found });
   }
   report("verify", checked, checked, true);
-  return { results: results.sort(byPrice), hiddenAgentOnly };
+  return { results: results.sort(byPrice), hiddenAgentOnly, hiddenByTerms, hiddenUnchecked };
 }
 
-// The cheapest offer sold by the airline itself. null = only agents sell it; throws if the check failed.
-async function airlineOffer(token, params, env) {
+const offersTotal = (offers) => offers.reduce((sum, o) => sum + o.price + o.bagCost, 0);
+
+// Wording as Google shows it, for example "Free change" or "No refunds"
+const hasFreeChangeOrRefund = (conditions) => conditions.some(c => /free (change|cancel)|no change fee|fully refundable|full refund/i.test(c));
+
+// What one checked bag costs per passenger on one leg. Fees come without a currency and are taken to be
+// in the search's currency; a range such as "99-187" counts at its top, so the total never reads low.
+function readBag(bags) {
+  const text = bags.join(" | ");
+  if (/no checked bags/i.test(text)) return { bag: "none", fee: 0 };
+  if (/1st checked bag[^|]*free/i.test(text)) return { bag: "included", fee: 0 };
+  const fee = text.match(/1st checked bag:\s*[^\d|]*([\d,.]+)(?:\s*-\s*[^\d|]*([\d,.]+))?/i);
+  if (fee) return { bag: "fee", fee: Number((fee[2] || fee[1]).replace(/,/g, "")) };
+  return { bag: "unknown", fee: 0 };
+}
+
+// The cheapest offer sold by the airline itself that fits the search's terms. null = only agents sell it,
+// false = the airline sells it but not on those terms; throws if the check failed.
+async function airlineOffer(token, params, q, env, legs) {
   const raw = await serp({ ...params, booking_token: token }, env);
   const offers = (raw.booking_options || [])
     .filter(o => !o.separate_tickets && o.together?.airline && Number.isFinite(o.together.price) && o.together.booking_request)
@@ -307,8 +321,15 @@ async function airlineOffer(token, params, env) {
       url: o.together.booking_request.url,
       postData: o.together.booking_request.post_data,
     }))
-    .sort((a, b) => a.price - b.price);
-  return offers[0] || null;
+    .map(o => {
+      const { bag, fee } = readBag(o.bags);
+      return { ...o, bag, bagCost: q.bag ? fee * (q.adults + q.children) * legs : 0 };
+    });
+  if (!offers.length) return null;
+  const fitting = offers
+    .filter(o => (!q.flex || hasFreeChangeOrRefund(o.conditions)) && (!q.bag || o.bag !== "none"))
+    .sort((a, b) => (a.price + a.bagCost) - (b.price + b.bagCost));
+  return fitting[0] || false;
 }
 
 // Fly to a cheap hub on one ticket and on to the destination on another. Compared with the cheapest
@@ -341,8 +362,24 @@ async function findTricks(q, outbound, inbound, env, report) {
     }));
   };
   await Promise.all([outward(), q.back ? homeward() : null]);
+  const confirmed = await airlineSoldTricks(tricks.sort((a, b) => b.saving - a.saving).slice(0, MAX_TRICKS), q, env);
   report("tricks", looked, looked, true);
-  return tricks.sort((a, b) => b.saving - a.saving);
+  return confirmed;
+}
+
+// A trick is shown only when the airline itself sells both of its tickets
+async function airlineSoldTricks(tricks, q, env) {
+  const checked = await Promise.all(tricks.map(async (trick) => {
+    const date = trick.direction === "out" ? q.depart : q.back;
+    const offers = await Promise.all(trick.legs.map(l => l.token
+      ? airlineOffer(l.token, oneWayParams(l.from, l.to, date, q), q, env, 1).catch(() => null)
+      : null));
+    if (offers.some(o => !o)) return null;
+    const total = offersTotal(offers);
+    const saving = trick.regular ? trick.regular - total : null;
+    return saving === null || saving > 0 ? { ...trick, total, saving, offers } : null;
+  }));
+  return checked.filter(Boolean);
 }
 
 function cheapestPerHub(flights, hubOf) {
@@ -362,7 +399,7 @@ function pushTrick(tricks, direction, hub, firstLeg, secondOptions, regular, las
   if (!best) return;
   const total = best[0].price + best[1].price;
   if (cheapestRegular && total >= cheapestRegular) return;
-  tricks.push({ direction, hub, total, saving: cheapestRegular ? cheapestRegular - total : null, legs: best });
+  tricks.push({ direction, hub, total, regular: cheapestRegular, saving: cheapestRegular ? cheapestRegular - total : null, legs: best });
 }
 
 function connectionOk(arrives, departs) {
