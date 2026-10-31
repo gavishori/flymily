@@ -285,7 +285,7 @@ async function runSearch(ev) {
     to: dest.code, depart: $('flDepart').value, return: $('flReturn').value,
     adults: Number($('flAdults').value), children: Number($('flChildren').value), infants: Number($('flInfants').value),
   };
-  if (q.return && q.return < q.depart) { status.textContent = 'תאריך החזרה לפני תאריך היציאה.'; return; }
+  if (!q.depart) { status.textContent = 'בחרו תאריך יציאה.'; return; }
   if (q.infants > q.adults) { status.textContent = 'כל תינוק צריך מבוגר אחד לפחות.'; return; }
 
   const params = new URLSearchParams({ ...q, tricks: $('flTricks').checked ? '1' : '0', stream: '1' });
@@ -390,6 +390,141 @@ function suggestionsFor(text) {
     .sort((a, b) => a[0] - b[0]).slice(0, MAX_SUGGESTIONS).map(([, d]) => d);
 }
 
+const dayKey = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const dayFromKey = (key) => { const [y, m, d] = key.split('-').map(Number); return new Date(y, m - 1, d); };
+const shortDay = (key) => dayFromKey(key).toLocaleDateString('he-IL', { day: 'numeric', month: 'short' });
+
+// One calendar for both dates: the first click sets the departure, the next sets the return on the same grid.
+// The chosen days live in the hidden #flDepart and #flReturn.
+function wireCalendar() {
+  const panel = $('flCalendar');
+  const button = $('flDateBtn');
+  const depart = $('flDepart');
+  const back = $('flReturn');
+  const today = dayKey(new Date());
+  const thisMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+  let shown = thisMonth;
+  let hovered = '';
+
+  const monthsShown = () => (window.matchMedia('(min-width: 821px)').matches ? 2 : 1);
+
+  const monthHtml = (first) => {
+    const year = first.getFullYear();
+    const month = first.getMonth();
+    const days = new Date(year, month + 1, 0).getDate();
+    const blanks = '<span></span>'.repeat(first.getDay());
+    const cells = Array.from({ length: days }, (_, i) => {
+      const key = dayKey(new Date(year, month, i + 1));
+      return `<button type="button" class="fl-day" data-day="${key}" aria-label="${dayFromKey(key).toLocaleDateString('he-IL', { day: 'numeric', month: 'long' })}" ${key < today ? 'disabled' : ''}>${i + 1}</button>`;
+    }).join('');
+    return `<div class="fl-month">
+      <div class="fl-month-title">${first.toLocaleDateString('he-IL', { month: 'long', year: 'numeric' })}</div>
+      <div class="fl-week">${[...'אבגדהוש'].map((d) => `<span>${d}</span>`).join('')}</div>
+      <div class="fl-days">${blanks}${cells}</div>
+    </div>`;
+  };
+
+  const paint = () => {
+    const start = depart.value;
+    const end = back.value || (hovered > start ? hovered : '');
+    panel.querySelectorAll('.fl-day').forEach((el) => {
+      const key = el.dataset.day;
+      el.classList.toggle('is-start', key === start);
+      el.classList.toggle('is-end', !!end && key === end);
+      el.classList.toggle('in-range', !!start && !!end && key > start && key < end);
+      el.setAttribute('aria-pressed', key === start || key === back.value ? 'true' : 'false');
+    });
+    const hint = panel.querySelector('.fl-cal-hint');
+    if (hint) hint.textContent = !start || back.value ? 'בחרו תאריך יציאה' : 'עכשיו בחרו תאריך חזרה';
+    const oneWay = panel.querySelector('[data-cal="one-way"]');
+    if (oneWay) oneWay.disabled = !start;
+  };
+
+  const draw = () => {
+    const months = Array.from({ length: monthsShown() }, (_, i) => new Date(shown.getFullYear(), shown.getMonth() + i, 1));
+    panel.innerHTML = `<div class="fl-cal-nav">
+        <button type="button" data-cal="prev" aria-label="חודש קודם" ${shown <= thisMonth ? 'disabled' : ''}>›</button>
+        <span class="fl-cal-hint" aria-live="polite"></span>
+        <button type="button" data-cal="next" aria-label="חודש הבא">‹</button>
+      </div>
+      <div class="fl-months" style="grid-template-columns:repeat(${months.length},1fr)">${months.map(monthHtml).join('')}</div>
+      <div class="fl-cal-foot">
+        <button type="button" data-cal="clear">ניקוי</button>
+        <button type="button" data-cal="one-way">כיוון אחד</button>
+      </div>`;
+    paint();
+  };
+
+  const syncButton = () => {
+    button.textContent = !depart.value ? 'יציאה וחזרה'
+      : back.value ? `${shortDay(depart.value)} – ${shortDay(back.value)}`
+      : `${shortDay(depart.value)} · כיוון אחד`;
+    button.classList.toggle('is-empty', !depart.value);
+  };
+
+  const open = () => {
+    if (depart.value) shown = new Date(dayFromKey(depart.value).getFullYear(), dayFromKey(depart.value).getMonth(), 1);
+    panel.hidden = false;
+    button.setAttribute('aria-expanded', 'true');
+    draw();
+    panel.scrollIntoView({ block: 'nearest' });
+  };
+  const close = () => {
+    panel.hidden = true;
+    hovered = '';
+    button.setAttribute('aria-expanded', 'false');
+    syncButton();
+  };
+
+  const pick = (key) => {
+    if (depart.value && !back.value && key >= depart.value) {
+      back.value = key;
+      close();
+      button.focus();
+      return;
+    }
+    depart.value = key;
+    back.value = '';
+    hovered = '';
+    paint();
+  };
+
+  button.addEventListener('click', () => (panel.hidden ? open() : close()));
+  panel.addEventListener('click', (ev) => {
+    const day = ev.target.closest('[data-day]');
+    if (day) { pick(day.dataset.day); return; }
+    const action = ev.target.closest('[data-cal]')?.dataset.cal;
+    if (action === 'prev' || action === 'next') {
+      shown = new Date(shown.getFullYear(), shown.getMonth() + (action === 'next' ? 1 : -1), 1);
+      draw();
+    } else if (action === 'one-way') {
+      back.value = '';
+      close();
+      button.focus();
+    } else if (action === 'clear') {
+      depart.value = '';
+      back.value = '';
+      hovered = '';
+      paint();
+    }
+  });
+  // Shows the trip's length while the return is still being chosen
+  panel.addEventListener('mouseover', (ev) => {
+    const key = ev.target.closest?.('[data-day]')?.dataset.day || '';
+    if (key === hovered || !depart.value || back.value) return;
+    hovered = key;
+    paint();
+  });
+  window.addEventListener('resize', () => { if (!panel.hidden) draw(); });
+  document.addEventListener('pointerdown', (ev) => {
+    if (!panel.hidden && !ev.target.closest('.fl-dates')) close();
+  });
+  document.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Escape' && !panel.hidden) { close(); button.focus(); }
+  });
+  syncButton();
+}
+
 function wireAutocomplete() {
   const input = $('flTo');
   const list = $('flSuggest');
@@ -448,10 +583,7 @@ function wireAutocomplete() {
 
 function init() {
   wireAutocomplete();
-  const today = new Date().toISOString().slice(0, 10);
-  $('flDepart').min = today;
-  $('flReturn').min = today;
-  $('flDepart').addEventListener('change', () => { $('flReturn').min = $('flDepart').value || today; });
+  wireCalendar();
   $('flightForm').addEventListener('submit', runSearch);
   $('flResults').addEventListener('click', (ev) => {
     const btn = ev.target.closest('.fl-trick-check');

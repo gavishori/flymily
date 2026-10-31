@@ -99,11 +99,9 @@ body[data-home-tab="flights"] #tripList{ display: none !important; }
 }
 .fl-form label{ display: grid; gap: 5px; font-size: 13px; font-weight: 600; color: var(--muted); grid-column: span 2; min-width: 0; }
 .fl-form label.fl-to{ grid-column: span 6; }
-.fl-form label:has(#flDepart), .fl-form label:has(#flReturn){ grid-column: span 3; }
 .fl-form .input{ color: var(--ink); background: var(--card); }
 .fl-form label.fl-check{ grid-column: span 6; display: flex; align-items: center; gap: 8px; font-weight: 500; }
 .fl-check input{ width: 18px; height: 18px; min-height: 0; flex: none; }
-.fl-hint{ grid-column: span 6; margin: -6px 0 0; font-size: 13px; }
 #flSubmit{ grid-column: span 6; min-height: 48px; font-size: 1.05rem; }
 #flSubmit:disabled{ opacity: .6; cursor: wait; }
 .fl-status{ min-height: 1.4em; margin: 14px 4px 0; color: var(--brand); font-weight: 600; }
@@ -168,9 +166,6 @@ body[data-home-tab="flights"] #tripList{ display: none !important; }
   .fl-verified{ margin-inline-start: 0; }
   .fl-leg{ align-items: flex-start; }
   .fl-book .btn{ width: 100%; }
-}
-@media (max-width: 480px){
-  .fl-form label:has(#flDepart), .fl-form label:has(#flReturn){ grid-column: span 6; }
 }
 
 /* ---------- Destination autocomplete ---------- */
@@ -240,3 +235,36 @@ body[data-flight-search="running"] #homeTabs [data-home-tab="flights"]::after{
 
 /* ---------- Takeoff time filters ---------- */
 .fl-form label:has(#flDepartTime), .fl-form label:has(#flReturnTime){ grid-column: span 3; }
+
+/* ---------- One calendar for departure and return ---------- */
+.fl-dates{ position: relative; grid-column: span 6; display: grid; gap: 5px; min-width: 0; }
+.fl-dates-label{ font-size: 13px; font-weight: 600; color: var(--muted); }
+#flDateBtn{ text-align: start; font-weight: 600; color: var(--ink); background: var(--card); cursor: pointer; }
+#flDateBtn.is-empty{ color: var(--muted); font-weight: 400; }
+.fl-calendar{
+  position: absolute; z-index: 20; top: 100%; inset-inline: 0; margin-top: 6px; padding: 14px;
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius); box-shadow: var(--shadow-lg);
+}
+.fl-calendar[hidden]{ display: none; }
+.fl-calendar button{ min-height: 0; border: none; background: transparent; color: var(--ink); cursor: pointer; }
+.fl-calendar button:disabled{ color: var(--muted); opacity: .4; cursor: default; }
+.fl-cal-nav{ display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.fl-cal-nav button{ width: 38px; height: 38px; padding: 0; font-size: 22px; line-height: 1; border-radius: 50%; }
+.fl-cal-nav button:not(:disabled):hover{ background: color-mix(in oklab, var(--brand) 10%, transparent); }
+.fl-cal-hint{ font-weight: 600; color: var(--brand); }
+.fl-months{ display: grid; gap: 24px; }
+.fl-month-title{ margin-bottom: 8px; text-align: center; font-weight: 600; color: var(--ink); }
+.fl-week, .fl-days{ display: grid; grid-template-columns: repeat(7, 1fr); }
+.fl-week span{ padding: 4px 0; text-align: center; font-size: 12px; font-weight: 600; color: var(--muted); }
+.fl-calendar .fl-day{ height: 40px; padding: 0; font-weight: 500; border-radius: 10px; }
+.fl-calendar .fl-day:not(:disabled):hover{ background: color-mix(in oklab, var(--brand) 12%, transparent); }
+.fl-calendar .fl-day.in-range{ border-radius: 0; background: color-mix(in oklab, var(--brand) 14%, transparent); }
+.fl-calendar .fl-day.is-start, .fl-calendar .fl-day.is-end{ background: var(--brand); color: #fff; font-weight: 700; }
+html body[data-theme="dark"] .fl-calendar .fl-day.is-start, html body[data-theme="dark"] .fl-calendar .fl-day.is-end{ color: #14162a; }
+.fl-cal-foot{ display: flex; justify-content: space-between; gap: 8px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+.fl-cal-foot button{ padding: 8px 12px; border-radius: var(--radius-sm); font-weight: 600; color: var(--brand); }
+.fl-cal-foot button:not(:disabled):hover{ background: color-mix(in oklab, var(--brand) 10%, transparent); }
+@media (max-width: 820px){
+  .fl-calendar{ padding: 10px; }
+}
