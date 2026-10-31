@@ -184,7 +184,9 @@ async function runSearch(ev) {
   const params = new URLSearchParams({ ...q, tricks: $('flTricks').checked ? '1' : '0' });
   const button = $('flSubmit');
   button.disabled = true;
-  status.textContent = 'מחפש ומאמת מחירים מול החברות. זה לוקח עד דקה...';
+  status.textContent = $('flTricks').checked
+    ? 'מחפש, מאמת מחירים ובודק קונקשנים. זה לוקח עד שתי דקות...'
+    : 'מחפש ומאמת מחירים מול החברות. זה לוקח עד דקה...';
   $('flResults').innerHTML = '';
   try {
     const r = await fetch(`${FLIGHTS_API}/search?${params}`);

@@ -18,10 +18,9 @@ const MAX_LEG_REPEATS = 2;   // so the five results aren't one flight paired fiv
 const MAX_VERIFY_CALLS = 10; // each airline-price check costs one SerpApi search
 const MIN_CONNECTION_MIN = 180;
 const MAX_CONNECTION_MIN = 20 * 60;
-const CACHE_SECONDS = 3600;  // same as SerpApi's free cache window
 
 export default {
-  async fetch(request, env, ctx) {
+  async fetch(request, env) {
     const origin = request.headers.get("Origin");
     const headers = corsHeaders(origin);
     if (request.method === "OPTIONS") return new Response(null, { headers });
@@ -32,13 +31,13 @@ export default {
     const url = new URL(request.url);
     try {
       const query = readQuery(url);
-      if (url.pathname === "/search") return reply(await search(query, env, ctx), 200, headers);
+      if (url.pathname === "/search") return reply(await search(query, env), 200, headers);
       if (url.pathname === "/booking") {
         const token = url.searchParams.get("token");
         const from = (url.searchParams.get("from") || "").toUpperCase();
         if (!token) throw new BadRequest("token");
         if (!/^[A-Z]{3}$/.test(from)) throw new BadRequest("from");
-        return reply({ offer: await airlineOffer(token, oneWayParams(from, query.to, query.depart, query), env, ctx) }, 200, headers);
+        return reply({ offer: await airlineOffer(token, oneWayParams(from, query.to, query.depart, query), env) }, 200, headers);
       }
       return reply({ error: "not-found" }, 404, headers);
     } catch (e) {
@@ -88,17 +87,21 @@ function readQuery(url) {
   };
 }
 
-async function search(q, env, ctx) {
-  const out = await oneWay(ORIGIN_AIRPORT, q.to, q.depart, q, env, ctx);
-  const back = q.back ? await oneWay(q.to, ORIGIN_AIRPORT, q.back, q, env, ctx) : null;
-  const roundTrip = q.back ? await serp(roundTripParams(q), env, ctx) : null;
+async function search(q, env) {
+  const [out, back, roundTrip] = await Promise.all([
+    oneWay(ORIGIN_AIRPORT, q.to, q.depart, q, env),
+    q.back ? oneWay(q.to, ORIGIN_AIRPORT, q.back, q, env) : null,
+    q.back ? serp(roundTripParams(q), env) : null,
+  ]);
 
   const candidates = q.back
     ? [...pairOneWays(out.flights, back.flights), ...roundTripCandidates(roundTrip)].sort(byPrice)
     : out.flights.map(f => ({ type: "oneway", total: f.price, legs: [f] }));
 
-  const { results, hiddenAgentOnly } = await keepAirlineSold(candidates, q, env, ctx);
-  const tricks = q.tricks ? await findTricks(q, out.flights, back?.flights, env, ctx) : [];
+  const [{ results, hiddenAgentOnly }, tricks] = await Promise.all([
+    keepAirlineSold(candidates, q, env),
+    q.tricks ? findTricks(q, out.flights, back?.flights, env) : [],
+  ]);
   return {
     currency: "ILS",
     results,
@@ -124,8 +127,8 @@ function oneWayParams(from, to, date, q) {
   return { ...baseParams(q), type: 2, departure_id: from, arrival_id: to, outbound_date: date };
 }
 
-async function oneWay(from, to, date, q, env, ctx) {
-  const raw = await serp(oneWayParams(from, to, date, q), env, ctx);
+async function oneWay(from, to, date, q, env) {
+  const raw = await serp(oneWayParams(from, to, date, q), env);
   return { raw, flights: readFlights(raw).slice(0, LEG_POOL) };
 }
 
@@ -180,7 +183,7 @@ function roundTripCandidates(raw) {
 
 // Google's list price can be an agent's. Walk up from the cheapest, ask who actually sells each flight,
 // and keep the airline's own price; flights only agents sell are dropped.
-async function keepAirlineSold(candidates, q, env, ctx) {
+async function keepAirlineSold(candidates, q, env) {
   const results = [];
   const offers = new Map();
   let calls = 0, hiddenAgentOnly = 0;
@@ -197,18 +200,23 @@ async function keepAirlineSold(candidates, q, env, ctx) {
   const offerFor = (token, params) => {
     if (!offers.has(token)) {
       calls++;
-      offers.set(token, airlineOffer(token, params, env, ctx).catch(() => undefined));
+      offers.set(token, airlineOffer(token, params, env).catch(() => undefined));
     }
     return offers.get(token);
   };
   const legParams = (leg, i) => oneWayParams(leg.from, leg.to, i === 0 ? q.depart : q.back, q);
+
+  // The cheapest will almost certainly be needed, so check them together instead of one by one
+  for (const c of candidates.slice(0, RESULT_COUNT)) {
+    if (c.type !== "round-trip") c.legs.forEach((l, i) => { if (l.token) offerFor(l.token, legParams(l, i)); });
+  }
 
   for (const candidate of candidates) {
     if (results.length >= RESULT_COUNT) break;
     if (calls >= MAX_VERIFY_CALLS) { addResult({ ...candidate, verified: false }); continue; }
     if (candidate.type === "round-trip") {
       calls++;
-      const returns = await serp({ ...roundTripParams(q), departure_token: candidate.legs[0].departureToken }, env, ctx).catch(() => null);
+      const returns = await serp({ ...roundTripParams(q), departure_token: candidate.legs[0].departureToken }, env).catch(() => null);
       const cheapest = returns && readFlights(returns)[0];
       if (!cheapest) { addResult({ ...candidate, verified: false }); continue; }
       candidate.legs = [candidate.legs[0], cheapest];
@@ -230,8 +238,8 @@ async function keepAirlineSold(candidates, q, env, ctx) {
 }
 
 // The cheapest offer sold by the airline itself. null = only agents sell it; throws if the check failed.
-async function airlineOffer(token, params, env, ctx) {
-  const raw = await serp({ ...params, booking_token: token }, env, ctx);
+async function airlineOffer(token, params, env) {
+  const raw = await serp({ ...params, booking_token: token }, env);
   const offers = (raw.booking_options || [])
     .filter(o => !o.separate_tickets && o.together?.airline && Number.isFinite(o.together.price) && o.together.booking_request)
     .map(o => ({
@@ -249,24 +257,26 @@ async function airlineOffer(token, params, env, ctx) {
 
 // Fly to a cheap hub on one ticket and on to the destination on another. Compared with the cheapest
 // regular flight per direction; only combinations that actually save money are returned.
-async function findTricks(q, outbound, inbound, env, ctx) {
+async function findTricks(q, outbound, inbound, env) {
   const destinations = q.to.split(",");
   const hubs = HUBS.filter(h => !destinations.includes(h));
   const tricks = [];
 
-  const toHub = readFlights(await serp(oneWayParams(ORIGIN_AIRPORT, hubs.join(","), q.depart, q), env, ctx));
-  for (const firstLeg of cheapestPerHub(toHub, l => l.to)) {
-    const onward = readFlights(await serp(oneWayParams(firstLeg.to, q.to, q.depart, q), env, ctx));
-    pushTrick(tricks, "out", firstLeg.to, firstLeg, onward, outbound);
-  }
-
-  if (q.back) {
-    const fromHub = readFlights(await serp(oneWayParams(hubs.join(","), ORIGIN_AIRPORT, q.back, q), env, ctx));
-    for (const lastLeg of cheapestPerHub(fromHub, l => l.from)) {
-      const toHubBack = readFlights(await serp(oneWayParams(q.to, lastLeg.from, q.back, q), env, ctx));
+  const outward = async () => {
+    const toHub = readFlights(await serp(oneWayParams(ORIGIN_AIRPORT, hubs.join(","), q.depart, q), env));
+    await Promise.all(cheapestPerHub(toHub, l => l.to).map(async firstLeg => {
+      const onward = readFlights(await serp(oneWayParams(firstLeg.to, q.to, q.depart, q), env));
+      pushTrick(tricks, "out", firstLeg.to, firstLeg, onward, outbound);
+    }));
+  };
+  const homeward = async () => {
+    const fromHub = readFlights(await serp(oneWayParams(hubs.join(","), ORIGIN_AIRPORT, q.back, q), env));
+    await Promise.all(cheapestPerHub(fromHub, l => l.from).map(async lastLeg => {
+      const toHubBack = readFlights(await serp(oneWayParams(q.to, lastLeg.from, q.back, q), env));
       pushTrick(tricks, "back", lastLeg.from, null, toHubBack, inbound, lastLeg);
-    }
-  }
+    }));
+  };
+  await Promise.all([outward(), q.back ? homeward() : null]);
   return tricks.sort((a, b) => b.saving - a.saving);
 }
 
@@ -308,21 +318,14 @@ async function searchesLeft(env) {
   } catch { return null; }
 }
 
-// Cached by query: repeating a search within the hour neither waits nor spends quota
-async function serp(params, env, ctx) {
+// SerpApi answers a repeated query from its own free one-hour cache, so there's no second cache here.
+// Workers' free plan allows 50 subrequests per call, and a Cache API read or write counts as one.
+async function serp(params, env) {
   const query = new URLSearchParams(Object.entries(params).map(([k, v]) => [k, String(v)]));
-  query.sort();
-  const key = new Request("https://serp-cache.internal/?" + query);
-  const hit = await caches.default.match(key);
-  if (hit) return hit.json();
-
   query.set("api_key", env.SERPAPI_KEY);
   const r = await fetch("https://serpapi.com/search.json?" + query);
   const data = await r.json();
   // SerpApi reports "no flights for this search" as an error; that's an empty result, not a failure
   if (data.error && !/no results|hasn't returned any results/i.test(data.error)) throw new Error(data.error);
-  ctx.waitUntil(caches.default.put(key, new Response(JSON.stringify(data), {
-    headers: { "Cache-Control": `max-age=${CACHE_SECONDS}` },
-  })));
   return data;
 }
