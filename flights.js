@@ -281,6 +281,9 @@ async function readSearch(response) {
 }
 
 function showResults(data, q, dest) {
+  if (data.results[0]) {
+    document.dispatchEvent(new CustomEvent('flymily:cheapest', { detail: { total: data.results[0].total, destination: dest.he } }));
+  }
   const box = $('flResults');
   const cards = data.results.map((r, i) => resultCard(r, i + 1, q)).join('');
   box.innerHTML = `
@@ -366,13 +369,13 @@ function clearDoneDot() {
 
 function setHomeTab(tab) {
   const container = document.querySelector('.container');
-  const flights = tab === 'flights';
+  const awayFromTrips = tab !== 'trips';
   document.body.dataset.homeTab = tab;
   // The trip map's full-screen layout would otherwise stay on behind the flight form
-  if (flights && container.classList.contains('home-map-mode')) {
+  if (awayFromTrips && container.classList.contains('home-map-mode')) {
     container.dataset.hadMap = '1';
     container.classList.remove('home-map-mode');
-  } else if (!flights && container.dataset.hadMap) {
+  } else if (!awayFromTrips && container.dataset.hadMap) {
     delete container.dataset.hadMap;
     container.classList.add('home-map-mode');
   }
@@ -381,7 +384,8 @@ function setHomeTab(tab) {
     b.classList.toggle('active', on);
     b.setAttribute('aria-selected', on ? 'true' : 'false');
   });
-  $('flightPanel').hidden = !flights;
+  $('flightPanel').hidden = tab !== 'flights';
+  $('pointsPanel').hidden = tab !== 'points';
   try { localStorage.setItem(DEFAULT_TAB_KEY, tab); } catch (_) {}
   clearDoneDot();
   drawProgressPill();
@@ -542,9 +546,7 @@ function wireCalendar() {
   syncButton();
 }
 
-function wireAutocomplete() {
-  const input = $('flTo');
-  const list = $('flSuggest');
+function wireAutocomplete(input, list) {
   let items = [];
   let active = -1;
 
@@ -555,18 +557,19 @@ function wireAutocomplete() {
     input.removeAttribute('aria-activedescendant');
   };
   const draw = () => {
-    list.innerHTML = items.map((d, i) => `<li id="flOpt${i}" role="option" data-i="${i}" aria-selected="${i === active}">
+    list.innerHTML = items.map((d, i) => `<li id="${list.id}Opt${i}" role="option" data-i="${i}" aria-selected="${i === active}">
       <span>${esc(d.he)} <span class="muted">${esc(d.country)}</span></span>
       <bdi class="muted">${esc(d.code.split(',').slice(0, 2).join(', '))}${d.code.split(',').length > 2 ? '…' : ''}</bdi>
     </li>`).join('');
     list.hidden = !items.length;
     input.setAttribute('aria-expanded', items.length ? 'true' : 'false');
-    if (active >= 0) input.setAttribute('aria-activedescendant', `flOpt${active}`);
+    if (active >= 0) input.setAttribute('aria-activedescendant', `${list.id}Opt${active}`);
     else input.removeAttribute('aria-activedescendant');
   };
   const choose = (d) => {
     input.value = d.he;
     close();
+    input.dispatchEvent(new Event('change', { bubbles: true }));
   };
 
   input.addEventListener('input', () => {
@@ -599,7 +602,8 @@ function wireAutocomplete() {
 }
 
 function init() {
-  wireAutocomplete();
+  wireAutocomplete($('flTo'), $('flSuggest'));
+  window.flymilyDest = { wire: wireAutocomplete, find: findDestination };
   wireCalendar();
   $('flightForm').addEventListener('submit', runSearch);
   document.querySelectorAll('#homeTabs [data-home-tab]').forEach((b) => {
