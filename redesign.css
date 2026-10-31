@@ -1,0 +1,174 @@
+/* =========================================================================
+   FLYMILY — Redesign layer + flight search
+   Loaded last. Follows modern-theme.css's approach: new tokens and shell
+   styling on top, without touching the legacy style.css. Covers the header,
+   login screen, home screen and the "חפש טיסה" tab.
+   ========================================================================= */
+
+/* The theme lives on <body data-theme>, and style.css sets its tokens there */
+html body, html body[data-theme="light"]{
+  --brand: #4338ca;
+  --accent: #f97316;
+  --bg: #f5f6fb;
+  --card: #ffffff;
+  --ink: #171a2b;
+  --muted: #5d6478;
+  --border: #e3e5ef;
+  --radius: 16px;
+  --radius-lg: 22px;
+  --sky: linear-gradient(135deg, #312e81 0%, #4338ca 52%, #f97316 130%);
+}
+html body[data-theme="dark"]{
+  --brand: #a5b4fc;
+  --accent: #fb923c;
+  --bg: #0e1020;
+  --card: #181b30;
+  --ink: #eceef8;
+  --muted: #a2a8bf;
+  --border: #2b2f4a;
+  --sky: linear-gradient(135deg, #1e1b4b 0%, #312e81 60%, #7c2d12 140%);
+}
+
+html, body{
+  font-family: Rubik, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+  background: var(--bg);
+}
+
+/* ---------- Header: deep, quiet indigo. Stays dark in both themes because
+   the mobile header buttons are white in mobile-auth.css. ---------- */
+html body[data-theme] .app > header{
+  background: #1e1b4b !important;
+  border-bottom: 1px solid rgba(255, 255, 255, .08);
+  box-shadow: none;
+}
+html body[data-theme] .app > header .brand, html body[data-theme] .app > header .brand-text{ color: #fff !important; }
+
+/* --brand is pale in dark mode, so white text on it would be unreadable */
+html body[data-theme="dark"] .btn.primary{ color: #14162a !important; }
+
+/* ---------- Login ---------- */
+.login-screen{ background: var(--sky); }
+.login-card{
+  border: none !important;
+  box-shadow: 0 30px 70px rgba(15, 12, 60, .35);
+}
+
+/* style.css caps the sidebar's height at some widths; on the home screen it is the whole page */
+html body .container.home-mode .sidebar{ max-height: none !important; height: 100%; overflow-y: auto; }
+
+/* ---------- Home tabs ---------- */
+.home-tabs{
+  display: inline-flex; gap: 4px; padding: 4px; margin-bottom: 20px;
+  background: color-mix(in oklab, var(--brand) 9%, var(--card));
+  border-radius: var(--radius-pill);
+}
+.home-tabs button{
+  min-height: 42px; padding: 8px 22px; border: none; background: transparent;
+  border-radius: var(--radius-pill); color: var(--muted); font-weight: 600;
+  transition: background-color var(--dur) var(--ease), color var(--dur) var(--ease);
+}
+.home-tabs button.active{ background: var(--card); color: var(--brand); box-shadow: var(--shadow-sm); }
+
+body[data-home-tab="flights"] #homeTripsHeader,
+body[data-home-tab="flights"] #tripControlsRow,
+body[data-home-tab="flights"] #tripList{ display: none !important; }
+
+/* ---------- Home trip cards ---------- */
+.container.home-mode .trip-card{ border: 1px solid var(--border); box-shadow: none; }
+.container.home-mode .trip-card:hover{ border-color: color-mix(in oklab, var(--brand) 40%, var(--border)); }
+#tripStatusActions .btn.active, #tripViewActions .btn.active{ color: #fff !important; background: var(--brand) !important; border-color: var(--brand) !important; }
+[data-theme="dark"] #tripStatusActions .btn.active, [data-theme="dark"] #tripViewActions .btn.active{ color: #14162a !important; }
+
+/* ---------- Flight search ---------- */
+.flight-panel{ max-width: 860px; margin-inline: auto; }
+.flight-panel[hidden]{ display: none; }
+.flight-panel h3{ margin: 28px 0 12px; font-size: 1.15rem; }
+
+.fl-hero{
+  padding: 28px 26px 62px; border-radius: var(--radius-lg);
+  background: var(--sky); color: #fff;
+}
+.fl-hero h2{ margin: 0 0 6px; font-size: 1.75rem; line-height: 1.2; color: #fff; }
+.fl-hero p{ margin: 0; opacity: .88; }
+
+.fl-form{
+  position: relative; margin: -40px 14px 0; padding: 18px;
+  display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px;
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); box-shadow: var(--shadow-md);
+}
+.fl-form label{ display: grid; gap: 5px; font-size: 13px; font-weight: 600; color: var(--muted); grid-column: span 2; min-width: 0; }
+.fl-form label.fl-to{ grid-column: span 6; }
+.fl-form label:has(#flDepart), .fl-form label:has(#flReturn){ grid-column: span 3; }
+.fl-form .input{ color: var(--ink); background: var(--card); }
+.fl-form label.fl-check{ grid-column: span 6; display: flex; align-items: center; gap: 8px; font-weight: 500; }
+.fl-check input{ width: 18px; height: 18px; min-height: 0; flex: none; }
+.fl-hint{ grid-column: span 6; margin: -6px 0 0; font-size: 13px; }
+#flSubmit{ grid-column: span 6; min-height: 48px; font-size: 1.05rem; }
+#flSubmit:disabled{ opacity: .6; cursor: wait; }
+.fl-status{ min-height: 1.4em; margin: 14px 4px 0; color: var(--brand); font-weight: 600; }
+
+.fl-results-head{ display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; }
+.fl-cards{ display: grid; gap: 14px; }
+.fl-card{
+  padding: 16px 18px; background: var(--card);
+  border: 1px solid var(--border); border-radius: var(--radius);
+}
+.fl-card-head{ display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+.fl-rank{
+  flex: none; display: grid; place-items: center; width: 34px; height: 34px;
+  border-radius: 50%; background: color-mix(in oklab, var(--brand) 12%, transparent);
+  color: var(--brand); font-weight: 700;
+}
+.fl-price{ font-size: 1.5rem; font-weight: 700; line-height: 1.2; }
+.fl-verified{
+  margin-inline-start: auto; padding: 4px 10px; border-radius: var(--radius-pill);
+  background: color-mix(in oklab, var(--ok) 15%, transparent); color: var(--ok);
+  font-size: 12px; font-weight: 600; white-space: nowrap;
+}
+.fl-leg{
+  display: flex; align-items: center; gap: 10px; padding: 10px 0;
+  border-top: 1px dashed var(--border);
+}
+.fl-leg-label{ flex: none; width: 42px; font-size: 13px; font-weight: 600; color: var(--muted); }
+.fl-logo{ flex: none; width: 28px; height: 28px; object-fit: contain; }
+.fl-leg-route{ display: grid; gap: 2px; min-width: 0; }
+.fl-leg-route strong{ text-align: start; unicode-bidi: plaintext; }
+.fl-leg-route .muted{ font-size: 13px; }
+.fl-actions{ display: grid; gap: 10px; padding-top: 10px; border-top: 1px dashed var(--border); }
+.fl-book{ display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; margin: 0; }
+.fl-book .muted{ font-size: 13px; }
+.fl-trick{ border-color: color-mix(in oklab, var(--accent) 45%, var(--border)); }
+.fl-trick-leg{ padding-bottom: 8px; }
+
+.fl-tips{ margin: 0; padding-inline-start: 20px; display: grid; gap: 8px; line-height: 1.55; }
+.fl-airlines{ display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.fl-airline-link{
+  padding: 7px 14px; border: 1px solid var(--border); border-radius: var(--radius-pill);
+  color: var(--ink); background: var(--card); text-decoration: none; font-size: 14px;
+}
+.fl-airline-link:hover{ border-color: var(--brand); color: var(--brand); }
+.fl-notice{
+  display: grid; justify-items: start; gap: 8px; padding: 18px; margin-top: 8px;
+  background: color-mix(in oklab, var(--accent) 10%, var(--card));
+  border: 1px solid color-mix(in oklab, var(--accent) 35%, var(--border));
+  border-radius: var(--radius);
+}
+.fl-notice p{ margin: 0; }
+
+@media (max-width: 820px){
+  .home-tabs{ display: flex; }
+  .home-tabs button{ flex: 1; padding-inline: 8px; }
+  .fl-hero{ padding: 22px 18px 58px; }
+  .fl-hero h2{ font-size: 1.4rem; }
+  .fl-form{ margin-inline: 8px; padding: 14px; grid-template-columns: repeat(6, 1fr); }
+  .fl-form label{ grid-column: span 3; }
+  .fl-form label:has(#flAdults), .fl-form label:has(#flChildren), .fl-form label:has(#flInfants){ grid-column: span 2; }
+  .fl-card-head{ flex-wrap: wrap; }
+  .fl-verified{ margin-inline-start: 0; }
+  .fl-leg{ align-items: flex-start; }
+  .fl-book .btn{ width: 100%; }
+}
+@media (max-width: 480px){
+  .fl-form label:has(#flDepart), .fl-form label:has(#flReturn){ grid-column: span 6; }
+}
