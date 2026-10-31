@@ -4,6 +4,7 @@
 const FLIGHTS_API = 'https://flymily-flights.gavishori.workers.dev';
 const DEFAULT_TAB_KEY = 'flymilyHomeTab';
 const MAX_SUGGESTIONS = 7;
+const STAGES = { search: 'מחפש טיסות', verify: 'מאמת מחירים מול החברות', tricks: 'בודק קונקשנים', ready: 'מסכם תוצאות' };
 
 // Cities with several airports search all of them, which often finds the cheaper low-cost one
 const DESTINATIONS = [
@@ -151,6 +152,106 @@ function recommendations(data, q) {
   return [...tips, ...STATIC_TIPS];
 }
 
+// Search progress: the timeline in the tab, a floating pill anywhere else in FLYMILY, and the browser
+// tab's title for when another tab is in front. All three show what the Worker actually reported.
+const progress = { baseTitle: document.title, started: 0, ticker: null, stages: {} };
+
+const seconds = () => Math.round((Date.now() - progress.started) / 1000);
+const activeStage = () => Object.keys(progress.stages).find((k) => progress.stages[k].state === 'active');
+
+function setTitle(text) {
+  document.title = text ? `${text} · ${progress.baseTitle}` : progress.baseTitle;
+}
+
+function stageDetail(name, s) {
+  if (s.total) return name === 'verify' ? `${s.done} בדיקות` : `${s.done}/${s.total}`;
+  return '';
+}
+
+function drawTimeline() {
+  const box = $('flTimeline');
+  const names = Object.keys(progress.stages);
+  box.hidden = !names.length;
+  box.innerHTML = `<ol>${names.map((name) => {
+    const s = progress.stages[name];
+    const time = s.seconds != null ? `<span class="muted">${s.seconds} שנ׳</span>` : '';
+    return `<li class="fl-step" data-state="${s.state}"><span class="fl-step-mark" aria-hidden="true"></span>
+      <span>${esc(STAGES[name])}</span><span class="muted">${stageDetail(name, s)}</span>${time}</li>`;
+  }).join('')}</ol>`;
+}
+
+function drawProgressPill() {
+  const pill = $('flProgressPill');
+  const running = document.body.dataset.flightSearch === 'running';
+  const done = document.body.dataset.flightSearch === 'done';
+  pill.hidden = !(running || done) || resultsInView();
+  if (pill.hidden) return;
+  pill.textContent = running ? `${STAGES[activeStage()] || 'מחפש טיסות'} · ${seconds()} שנ׳` : 'החיפוש הסתיים · לתוצאות';
+}
+
+function tickProgress() {
+  $('flStatus').textContent = `עובד כבר ${seconds()} שנ׳`;
+  drawProgressPill();
+  setTitle(`✈ ${STAGES[activeStage()] || 'מחפש'} ${seconds()} שנ׳`);
+}
+
+function startProgress(tricks) {
+  progress.started = Date.now();
+  progress.stages = { search: { state: 'active' }, verify: { state: 'pending' } };
+  if (tricks) progress.stages.tricks = { state: 'pending' };
+  progress.stages.ready = { state: 'pending' };
+  drawTimeline();
+  tickProgress();
+  progress.ticker = setInterval(tickProgress, 1000);
+}
+
+function applyProgress({ stage, done, total, final }) {
+  const s = progress.stages[stage];
+  if (!s) return;
+  Object.assign(s, { done, total, state: final ? 'done' : 'active' });
+  if (final) s.seconds = seconds();
+  // Price checks and connections start together once the flight list is in
+  if (stage === 'search' && final) {
+    Object.values(progress.stages).forEach((other) => { if (other.state === 'pending') other.state = 'active'; });
+    progress.stages.ready.state = 'pending';
+  }
+  if (Object.entries(progress.stages).every(([k, v]) => k === 'ready' || v.state === 'done')) progress.stages.ready.state = 'active';
+  drawTimeline();
+  tickProgress();
+}
+
+function endProgress(failed) {
+  clearInterval(progress.ticker);
+  const stages = progress.stages;
+  Object.values(stages).forEach((s) => { if (s.state === 'active') s.state = failed ? 'failed' : 'done'; });
+  if (!failed) {
+    stages.ready.state = 'done';
+    stages.ready.seconds = seconds();
+  }
+  drawTimeline();
+  setTitle('');
+}
+
+// The Worker writes one JSON object per line; lines can arrive split across chunks
+async function readSearch(response) {
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  let answer = null;
+  for (;;) {
+    const { value, done } = await reader.read();
+    buffer += decoder.decode(value || new Uint8Array(), { stream: !done });
+    const lines = buffer.split('\n');
+    buffer = done ? '' : lines.pop();
+    for (const line of lines.filter(Boolean)) {
+      const message = JSON.parse(line);
+      if (message.stage) applyProgress(message);
+      else answer = message;
+    }
+    if (done) return answer;
+  }
+}
+
 function showResults(data, q, dest) {
   const box = $('flResults');
   const cards = data.results.map((r, i) => resultCard(r, i + 1, q)).join('');
@@ -187,26 +288,28 @@ async function runSearch(ev) {
   if (q.return && q.return < q.depart) { status.textContent = 'תאריך החזרה לפני תאריך היציאה.'; return; }
   if (q.infants > q.adults) { status.textContent = 'כל תינוק צריך מבוגר אחד לפחות.'; return; }
 
-  const params = new URLSearchParams({ ...q, tricks: $('flTricks').checked ? '1' : '0' });
+  const params = new URLSearchParams({ ...q, tricks: $('flTricks').checked ? '1' : '0', stream: '1' });
   const button = $('flSubmit');
   button.disabled = true;
   document.body.dataset.flightSearch = 'running';
-  status.textContent = $('flTricks').checked
-    ? 'מחפש, מאמת מחירים ובודק קונקשנים. זה לוקח עד שתי דקות...'
-    : 'מחפש ומאמת מחירים מול החברות. זה לוקח עד דקה...';
   $('flResults').innerHTML = '';
+  startProgress($('flTricks').checked);
+  let failed = true;
   try {
     const r = await api(`/search?${params}`);
-    const data = await r.json();
-    if (data.error === 'no-key') showFallback(q, 'החיפוש החי עדיין לא חובר.');
-    else if (!r.ok) showFallback(q, 'החיפוש נכשל כרגע.');
-    else showResults(data, q, dest);
+    const answer = r.ok ? await readSearch(r) : await r.json();
+    if (answer?.result) {
+      showResults(answer.result, q, dest);
+      failed = false;
+    } else if (answer?.error === 'no-key') showFallback(q, 'החיפוש החי עדיין לא חובר.');
+    else showFallback(q, 'החיפוש נכשל כרגע.');
   } catch (e) {
     console.error('flight search failed', e);
     showFallback(q, 'החיפוש החי לא זמין כרגע.');
   } finally {
+    endProgress(failed);
     button.disabled = false;
-    status.textContent = '';
+    status.textContent = failed ? '' : `הסתיים ב־${seconds()} שנ׳`;
     finishSearch();
   }
 }
@@ -220,14 +323,16 @@ function finishSearch() {
   if (resultsInView()) delete document.body.dataset.flightSearch;
   else {
     document.body.dataset.flightSearch = 'done';
-    if (!document.title.startsWith('● ')) document.title = '● ' + document.title;
+    setTitle('● החיפוש הסתיים');
   }
+  drawProgressPill();
 }
 
 function clearDoneDot() {
   if (document.body.dataset.flightSearch !== 'done' || !resultsInView()) return;
   delete document.body.dataset.flightSearch;
-  document.title = document.title.replace(/^● /, '');
+  setTitle('');
+  drawProgressPill();
 }
 
 async function checkTrickLeg(btn) {
@@ -266,6 +371,7 @@ function setHomeTab(tab) {
   $('flightPanel').hidden = !flights;
   try { localStorage.setItem(DEFAULT_TAB_KEY, tab); } catch (_) {}
   clearDoneDot();
+  drawProgressPill();
 }
 
 function suggestionsFor(text) {
@@ -353,6 +459,10 @@ function init() {
     b.addEventListener('click', () => setHomeTab(b.dataset.homeTab));
   });
   document.addEventListener('visibilitychange', clearDoneDot);
+  $('flProgressPill').addEventListener('click', () => {
+    if (document.querySelector('.container.trip-mode')) $('btnAllTrips')?.click();
+    setTimeout(() => setHomeTab('flights'));
+  });
   // Back from a trip with results waiting: go straight to them
   $('btnAllTrips')?.addEventListener('click', () => {
     if (document.body.dataset.flightSearch === 'done') setTimeout(() => setHomeTab('flights'));

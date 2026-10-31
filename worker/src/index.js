@@ -4,6 +4,8 @@
 //
 // GET /search?to=LHR,LGW&depart=2026-12-01&return=2026-12-08&adults=2&children=0&infants=0&tricks=1
 //   → { results, tricks, insights, hiddenAgentOnly, searchesLeft }
+//   With &stream=1 the answer is one JSON object per line: { stage, done, total, final } while it works,
+//   then { result } or { error }.
 // GET /booking?token=<booking_token>&from=ATH&to=LHR&depart=2026-12-01   →   the airline's own offer for one flight
 //
 // SERPAPI_KEY is a Worker secret: npx wrangler secret put SERPAPI_KEY
@@ -20,7 +22,7 @@ const MIN_CONNECTION_MIN = 180;
 const MAX_CONNECTION_MIN = 20 * 60;
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const origin = request.headers.get("Origin");
     const headers = corsHeaders(origin);
     if (request.method === "OPTIONS") return new Response(null, { headers });
@@ -31,7 +33,10 @@ export default {
     const url = new URL(request.url);
     try {
       const query = readQuery(url);
-      if (url.pathname === "/search") return reply(await search(query, env), 200, headers);
+      if (url.pathname === "/search") {
+        if (url.searchParams.get("stream") === "1") return streamSearch(query, env, ctx, headers);
+        return reply(await search(query, env), 200, headers);
+      }
       if (url.pathname === "/booking") {
         const token = url.searchParams.get("token");
         const from = (url.searchParams.get("from") || "").toUpperCase();
@@ -87,11 +92,43 @@ function readQuery(url) {
   };
 }
 
-async function search(q, env) {
+function streamSearch(q, env, ctx, headers) {
+  const { readable, writable } = new TransformStream();
+  const writer = writable.getWriter();
+  const encoder = new TextEncoder();
+  // A closed page makes writes fail; the search has nothing left to tell it, so that's ignored
+  const send = (message) => writer.write(encoder.encode(JSON.stringify(message) + "\n")).catch(() => {});
+
+  ctx.waitUntil((async () => {
+    try {
+      const result = await search(q, env, (stage, done, total, final = false) => send({ stage, done, total, final }));
+      await send({ result });
+    } catch (e) {
+      console.error(e);
+      await send({ error: "upstream" });
+    }
+    await writer.close().catch(() => {});
+  })());
+
+  return new Response(readable, {
+    headers: { ...headers, "Content-Type": "application/x-ndjson; charset=utf-8", "Cache-Control": "no-store" },
+  });
+}
+
+async function search(q, env, report = () => {}) {
+  const searches = q.back ? 3 : 1;
+  let searched = 0;
+  const counted = (work) => work.then(value => {
+    searched++;
+    report("search", searched, searches, searched === searches);
+    return value;
+  });
+
+  report("search", 0, searches);
   const [out, back, roundTrip] = await Promise.all([
-    oneWay(ORIGIN_AIRPORT, q.to, q.depart, q, env),
-    q.back ? oneWay(q.to, ORIGIN_AIRPORT, q.back, q, env) : null,
-    q.back ? serp(roundTripParams(q), env) : null,
+    counted(oneWay(ORIGIN_AIRPORT, q.to, q.depart, q, env)),
+    q.back ? counted(oneWay(q.to, ORIGIN_AIRPORT, q.back, q, env)) : null,
+    q.back ? counted(serp(roundTripParams(q), env)) : null,
   ]);
 
   const candidates = q.back
@@ -99,8 +136,8 @@ async function search(q, env) {
     : out.flights.map(f => ({ type: "oneway", total: f.price, legs: [f] }));
 
   const [{ results, hiddenAgentOnly }, tricks] = await Promise.all([
-    keepAirlineSold(candidates, q, env),
-    q.tricks ? findTricks(q, out.flights, back?.flights, env) : [],
+    keepAirlineSold(candidates, q, env, report),
+    q.tricks ? findTricks(q, out.flights, back?.flights, env, report) : [],
   ]);
   return {
     currency: "ILS",
@@ -183,10 +220,14 @@ function roundTripCandidates(raw) {
 
 // Google's list price can be an agent's. Walk up from the cheapest, ask who actually sells each flight,
 // and keep the airline's own price; flights only agents sell are dropped.
-async function keepAirlineSold(candidates, q, env) {
+async function keepAirlineSold(candidates, q, env, report) {
   const results = [];
   const offers = new Map();
-  let calls = 0, hiddenAgentOnly = 0;
+  let calls = 0, checked = 0, hiddenAgentOnly = 0;
+  const countCheck = (value) => {
+    report("verify", ++checked, calls);
+    return value;
+  };
 
   // The same two flights can appear as a round-trip ticket and as two one-ways; show one, preferring the single ticket
   const addResult = (result) => {
@@ -200,11 +241,13 @@ async function keepAirlineSold(candidates, q, env) {
   const offerFor = (token, params) => {
     if (!offers.has(token)) {
       calls++;
-      offers.set(token, airlineOffer(token, params, env).catch(() => undefined));
+      offers.set(token, airlineOffer(token, params, env).catch(() => undefined).then(countCheck));
     }
     return offers.get(token);
   };
   const legParams = (leg, i) => oneWayParams(leg.from, leg.to, i === 0 ? q.depart : q.back, q);
+
+  report("verify", 0, 0);
 
   // The cheapest will almost certainly be needed, so check them together instead of one by one
   for (const c of candidates.slice(0, RESULT_COUNT)) {
@@ -216,7 +259,7 @@ async function keepAirlineSold(candidates, q, env) {
     if (calls >= MAX_VERIFY_CALLS) { addResult({ ...candidate, verified: false }); continue; }
     if (candidate.type === "round-trip") {
       calls++;
-      const returns = await serp({ ...roundTripParams(q), departure_token: candidate.legs[0].departureToken }, env).catch(() => null);
+      const returns = await serp({ ...roundTripParams(q), departure_token: candidate.legs[0].departureToken }, env).catch(() => null).then(countCheck);
       const cheapest = returns && readFlights(returns)[0];
       if (!cheapest) { addResult({ ...candidate, verified: false }); continue; }
       candidate.legs = [candidate.legs[0], cheapest];
@@ -234,6 +277,7 @@ async function keepAirlineSold(candidates, q, env) {
       offers: found,
     });
   }
+  report("verify", checked, checked, true);
   return { results: results.sort(byPrice), hiddenAgentOnly };
 }
 
@@ -257,26 +301,35 @@ async function airlineOffer(token, params, env) {
 
 // Fly to a cheap hub on one ticket and on to the destination on another. Compared with the cheapest
 // regular flight per direction; only combinations that actually save money are returned.
-async function findTricks(q, outbound, inbound, env) {
+async function findTricks(q, outbound, inbound, env, report) {
   const destinations = q.to.split(",");
   const hubs = HUBS.filter(h => !destinations.includes(h));
   const tricks = [];
+  const lookups = q.back ? 6 : 3;
+  let looked = 0;
+  const lookup = async (params) => {
+    const flights = readFlights(await serp(params, env));
+    report("tricks", ++looked, lookups);
+    return flights;
+  };
 
+  report("tricks", 0, lookups);
   const outward = async () => {
-    const toHub = readFlights(await serp(oneWayParams(ORIGIN_AIRPORT, hubs.join(","), q.depart, q), env));
+    const toHub = await lookup(oneWayParams(ORIGIN_AIRPORT, hubs.join(","), q.depart, q));
     await Promise.all(cheapestPerHub(toHub, l => l.to).map(async firstLeg => {
-      const onward = readFlights(await serp(oneWayParams(firstLeg.to, q.to, q.depart, q), env));
+      const onward = await lookup(oneWayParams(firstLeg.to, q.to, q.depart, q));
       pushTrick(tricks, "out", firstLeg.to, firstLeg, onward, outbound);
     }));
   };
   const homeward = async () => {
-    const fromHub = readFlights(await serp(oneWayParams(hubs.join(","), ORIGIN_AIRPORT, q.back, q), env));
+    const fromHub = await lookup(oneWayParams(hubs.join(","), ORIGIN_AIRPORT, q.back, q));
     await Promise.all(cheapestPerHub(fromHub, l => l.from).map(async lastLeg => {
-      const toHubBack = readFlights(await serp(oneWayParams(q.to, lastLeg.from, q.back, q), env));
+      const toHubBack = await lookup(oneWayParams(q.to, lastLeg.from, q.back, q));
       pushTrick(tricks, "back", lastLeg.from, null, toHubBack, inbound, lastLeg);
     }));
   };
   await Promise.all([outward(), q.back ? homeward() : null]);
+  report("tricks", looked, looked, true);
   return tricks.sort((a, b) => b.saving - a.saving);
 }
 
