@@ -27,6 +27,37 @@ const DESTINATIONS = [
   ['בנגקוק', 'Bangkok', 'BKK,DMK', 'תאילנד'], ['פוקט', 'Phuket', 'HKT', 'תאילנד'], ['צ׳יאנג מאי', 'Chiang Mai', 'CNX', 'תאילנד'],
   ['טוקיו', 'Tokyo', 'NRT,HND', 'יפן'], ['האנוי', 'Hanoi', 'HAN', 'וייטנאם'], ['גואה', 'Goa', 'GOI,GOX', 'הודו'], ['דלהי', 'Delhi', 'DEL', 'הודו'], ['מומבאי', 'Mumbai', 'BOM', 'הודו'],
   ['סיישל', 'Seychelles', 'SEZ', 'סיישל'], ['קייפטאון', 'Cape Town', 'CPT', 'דרום אפריקה'],
+  ['סיאטל', 'Seattle', 'SEA', 'ארצות הברית'], ['סן פרנסיסקו', 'San Francisco', 'SFO,OAK,SJC', 'ארצות הברית'], ['שיקגו', 'Chicago', 'ORD,MDW', 'ארצות הברית'],
+  ['בוסטון', 'Boston', 'BOS', 'ארצות הברית'], ['וושינגטון', 'Washington', 'IAD,DCA,BWI', 'ארצות הברית'], ['לאס וגאס', 'Las Vegas', 'LAS', 'ארצות הברית'],
+  ['אורלנדו', 'Orlando', 'MCO', 'ארצות הברית'], ['אטלנטה', 'Atlanta', 'ATL', 'ארצות הברית'], ['דאלאס', 'Dallas', 'DFW,DAL', 'ארצות הברית'],
+  ['יוסטון', 'Houston', 'IAH,HOU', 'ארצות הברית'], ['דנבר', 'Denver', 'DEN', 'ארצות הברית'], ['פילדלפיה', 'Philadelphia', 'PHL', 'ארצות הברית'],
+  ['פורטלנד', 'Portland', 'PDX', 'ארצות הברית'], ['סן דייגו', 'San Diego', 'SAN', 'ארצות הברית'], ['פיניקס', 'Phoenix', 'PHX', 'ארצות הברית'],
+  ['הונולולו', 'Honolulu', 'HNL', 'ארצות הברית'], ['ניו אורלינס', 'New Orleans', 'MSY', 'ארצות הברית'], ['אנקורג׳', 'Anchorage', 'ANC', 'ארצות הברית'],
+  ['סולט לייק סיטי', 'Salt Lake City', 'SLC', 'ארצות הברית'], ['מיניאפוליס', 'Minneapolis', 'MSP', 'ארצות הברית'], ['דטרויט', 'Detroit', 'DTW', 'ארצות הברית'],
+  ['ונקובר', 'Vancouver', 'YVR', 'קנדה'], ['מונטריאול', 'Montreal', 'YUL', 'קנדה'], ['קלגרי', 'Calgary', 'YYC', 'קנדה'],
+  ['מקסיקו סיטי', 'Mexico City', 'MEX', 'מקסיקו'], ['קנקון', 'Cancun', 'CUN', 'מקסיקו'], ['פנמה סיטי', 'Panama City', 'PTY', 'פנמה'], ['סן חוסה', 'San Jose', 'SJO', 'קוסטה ריקה'],
+  ['בואנוס איירס', 'Buenos Aires', 'EZE,AEP', 'ארגנטינה'], ['ריו דה ז׳ניירו', 'Rio de Janeiro', 'GIG', 'ברזיל'], ['סאו פאולו', 'Sao Paulo', 'GRU', 'ברזיל'],
+  ['לימה', 'Lima', 'LIM', 'פרו'], ['קוסקו', 'Cusco', 'CUZ', 'פרו'], ['בוגוטה', 'Bogota', 'BOG', 'קולומביה'], ['סנטיאגו', 'Santiago', 'SCL', 'צ׳ילה'], ['קיטו', 'Quito', 'UIO', 'אקוודור'],
+  ['סידני', 'Sydney', 'SYD', 'אוסטרליה'], ['מלבורן', 'Melbourne', 'MEL', 'אוסטרליה'], ['בריסביין', 'Brisbane', 'BNE', 'אוסטרליה'], ['פרת׳', 'Perth', 'PER', 'אוסטרליה'],
+  ['אוקלנד', 'Auckland', 'AKL', 'ניו זילנד'], ['קווינסטאון', 'Queenstown', 'ZQN', 'ניו זילנד'],
+  ['סינגפור', 'Singapore', 'SIN', 'סינגפור'], ['הונג קונג', 'Hong Kong', 'HKG', 'סין'], ['בייג׳ינג', 'Beijing', 'PEK,PKX', 'סין'], ['שנגחאי', 'Shanghai', 'PVG,SHA', 'סין'],
+  ['טאיפיי', 'Taipei', 'TPE', 'טייוואן'], ['סיאול', 'Seoul', 'ICN,GMP', 'דרום קוריאה'], ['אוסקה', 'Osaka', 'KIX', 'יפן'], ['קואלה לומפור', 'Kuala Lumpur', 'KUL', 'מלזיה'],
+  ['באלי', 'Bali', 'DPS', 'אינדונזיה'], ['ג׳קרטה', 'Jakarta', 'CGK', 'אינדונזיה'], ['מנילה', 'Manila', 'MNL', 'פיליפינים'],
+  ['הו צ׳י מין', 'Ho Chi Minh City', 'SGN', 'וייטנאם'], ['דה נאנג', 'Da Nang', 'DAD', 'וייטנאם'], ['קטמנדו', 'Kathmandu', 'KTM', 'נפאל'], ['קולומבו', 'Colombo', 'CMB', 'סרי לנקה'],
+  ['מאלה', 'Male', 'MLE', 'מלדיביים'], ['קוצ׳ין', 'Kochi', 'COK', 'הודו'], ['בנגלור', 'Bangalore', 'BLR', 'הודו'], ['טשקנט', 'Tashkent', 'TAS', 'אוזבקיסטן'], ['אלמטי', 'Almaty', 'ALA', 'קזחסטן'],
+  ['זנזיבר', 'Zanzibar', 'ZNZ', 'טנזניה'], ['קילימנג׳רו', 'Kilimanjaro', 'JRO', 'טנזניה'], ['ניירובי', 'Nairobi', 'NBO', 'קניה'], ['יוהנסבורג', 'Johannesburg', 'JNB', 'דרום אפריקה'],
+  ['אדיס אבבה', 'Addis Ababa', 'ADD', 'אתיופיה'], ['מרקש', 'Marrakesh', 'RAK', 'מרוקו'], ['קזבלנקה', 'Casablanca', 'CMN', 'מרוקו'], ['קהיר', 'Cairo', 'CAI', 'מצרים'], ['מאוריציוס', 'Mauritius', 'MRU', 'מאוריציוס'],
+  ['אדינבורו', 'Edinburgh', 'EDI', 'בריטניה'], ['גלזגו', 'Glasgow', 'GLA', 'בריטניה'], ['ברמינגהם', 'Birmingham', 'BHX', 'בריטניה'], ['ליברפול', 'Liverpool', 'LPL', 'בריטניה'],
+  ['ולנסיה', 'Valencia', 'VLC', 'ספרד'], ['סביליה', 'Seville', 'SVQ', 'ספרד'], ['בילבאו', 'Bilbao', 'BIO', 'ספרד'], ['איביזה', 'Ibiza', 'IBZ', 'ספרד'], ['מיורקה', 'Mallorca', 'PMI', 'ספרד'], ['טנריף', 'Tenerife', 'TFS,TFN', 'ספרד'],
+  ['פארו', 'Faro', 'FAO', 'פורטוגל'], ['בורדו', 'Bordeaux', 'BOD', 'צרפת'], ['טולוז', 'Toulouse', 'TLS', 'צרפת'],
+  ['בולוניה', 'Bologna', 'BLQ', 'איטליה'], ['טורינו', 'Turin', 'TRN', 'איטליה'], ['ורונה', 'Verona', 'VRN', 'איטליה'], ['בארי', 'Bari', 'BRI', 'איטליה'], ['סרדיניה', 'Sardinia', 'CAG,OLB', 'איטליה'],
+  ['מיקונוס', 'Mykonos', 'JMK', 'יוון'], ['סנטוריני', 'Santorini', 'JTR', 'יוון'], ['זקינתוס', 'Zakynthos', 'ZTH', 'יוון'], ['קוס', 'Kos', 'KGS', 'יוון'],
+  ['אינסברוק', 'Innsbruck', 'INN', 'אוסטריה'], ['זלצבורג', 'Salzburg', 'SZG', 'אוסטריה'], ['דיסלדורף', 'Dusseldorf', 'DUS', 'גרמניה'], ['קלן', 'Cologne', 'CGN', 'גרמניה'], ['שטוטגרט', 'Stuttgart', 'STR', 'גרמניה'], ['בזל', 'Basel', 'BSL', 'שווייץ'],
+  ['ליובליאנה', 'Ljubljana', 'LJU', 'סלובניה'], ['זאגרב', 'Zagreb', 'ZAG', 'קרואטיה'], ['ספליט', 'Split', 'SPU', 'קרואטיה'], ['דוברובניק', 'Dubrovnik', 'DBV', 'קרואטיה'],
+  ['בלגרד', 'Belgrade', 'BEG', 'סרביה'], ['סקופיה', 'Skopje', 'SKP', 'צפון מקדוניה'], ['פודגוריצה', 'Podgorica', 'TGD', 'מונטנגרו'], ['ירוואן', 'Yerevan', 'EVN', 'ארמניה'],
+  ['גדנסק', 'Gdansk', 'GDN', 'פולין'], ['ורוצלב', 'Wroclaw', 'WRO', 'פולין'], ['קלוז׳', 'Cluj', 'CLJ', 'רומניה'],
+  ['וילנה', 'Vilnius', 'VNO', 'ליטא'], ['ריגה', 'Riga', 'RIX', 'לטביה'], ['טאלין', 'Tallinn', 'TLL', 'אסטוניה'], ['הלסינקי', 'Helsinki', 'HEL', 'פינלנד'], ['רובניימי', 'Rovaniemi', 'RVN', 'פינלנד'],
+  ['ריקיאוויק', 'Reykjavik', 'KEF', 'איסלנד'], ['טרומסו', 'Tromso', 'TOS', 'נורווגיה'], ['ברגן', 'Bergen', 'BGO', 'נורווגיה'], ['גטבורג', 'Gothenburg', 'GOT', 'שוודיה'],
 ].map(([he, en, code, country]) => ({ he, en, code, country }));
 
 const AIRLINES = [
@@ -386,8 +417,14 @@ function suggestionsFor(text) {
     if (names.some((n) => n.includes(t))) return 2;
     return 3;
   };
-  return DESTINATIONS.map((d) => [rank(d), d]).filter(([r]) => r < 3)
+  const matches = DESTINATIONS.map((d) => [rank(d), d]).filter(([r]) => r < 3)
     .sort((a, b) => a[0] - b[0]).slice(0, MAX_SUGGESTIONS).map(([, d]) => d);
+  const isListedCode = DESTINATIONS.some((d) => d.code.toLowerCase().split(',').includes(t));
+  if (/^[a-z]{3}$/.test(t) && !isListedCode) {
+    const code = t.toUpperCase();
+    return [...matches, { he: code, en: code, code, country: 'קוד שדה תעופה' }].slice(-MAX_SUGGESTIONS);
+  }
+  return matches;
 }
 
 const dayKey = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
