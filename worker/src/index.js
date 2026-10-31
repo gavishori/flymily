@@ -185,6 +185,15 @@ async function keepAirlineSold(candidates, q, env, ctx) {
   const offers = new Map();
   let calls = 0, hiddenAgentOnly = 0;
 
+  // The same two flights can appear as a round-trip ticket and as two one-ways; show one, preferring the single ticket
+  const addResult = (result) => {
+    const key = result.legs.map(legKey).join("|");
+    const same = results.findIndex(r => r.legs.map(legKey).join("|") === key);
+    if (same < 0) { results.push(result); return; }
+    const singleTicket = result.type === "round-trip" && result.total <= results[same].total;
+    if (singleTicket || result.total < results[same].total) results[same] = result;
+  };
+
   const offerFor = (token, params) => {
     if (!offers.has(token)) {
       calls++;
@@ -196,12 +205,12 @@ async function keepAirlineSold(candidates, q, env, ctx) {
 
   for (const candidate of candidates) {
     if (results.length >= RESULT_COUNT) break;
-    if (calls >= MAX_VERIFY_CALLS) { results.push({ ...candidate, verified: false }); continue; }
+    if (calls >= MAX_VERIFY_CALLS) { addResult({ ...candidate, verified: false }); continue; }
     if (candidate.type === "round-trip") {
       calls++;
       const returns = await serp({ ...roundTripParams(q), departure_token: candidate.legs[0].departureToken }, env, ctx).catch(() => null);
       const cheapest = returns && readFlights(returns)[0];
-      if (!cheapest) { results.push({ ...candidate, verified: false }); continue; }
+      if (!cheapest) { addResult({ ...candidate, verified: false }); continue; }
       candidate.legs = [candidate.legs[0], cheapest];
     }
     const checks = candidate.type === "round-trip"
@@ -209,8 +218,8 @@ async function keepAirlineSold(candidates, q, env, ctx) {
       : candidate.legs.map((l, i) => [l.token, legParams(l, i)]);
     const found = await Promise.all(checks.map(([token, params]) => token ? offerFor(token, params) : undefined));
     if (found.includes(null)) { hiddenAgentOnly++; continue; }
-    if (found.includes(undefined)) { results.push({ ...candidate, verified: false }); continue; }
-    results.push({
+    if (found.includes(undefined)) { addResult({ ...candidate, verified: false }); continue; }
+    addResult({
       ...candidate,
       verified: true,
       total: found.reduce((sum, o) => sum + o.price, 0),
