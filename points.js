@@ -32,29 +32,49 @@ function regionFor(dest) {
 const REGION_ADVICE = {
   europe: {
     programs: ['flyingBlue', 'united', 'aeroplan', 'iberia', 'british'],
-    tip: 'לאירופה טיסות הלואו־קוסט זולות, ומיילים לא עובדים עליהן. בקו קצר וזול עדיף לשלם במזומן או דרך Chase Travel ולשמור את הנקודות לקו ארוך.',
+    yes: 'בקו קצר וזול שלמו במזומן או דרך Chase Travel, ושמרו את הנקודות לקו ארוך.',
+    no: 'לא להשתמש במיילים על לואו־קוסט: Wizz Air, easyJet וחברות דומות לא משתתפות.',
   },
   'north-america': {
     programs: ['united', 'aeroplan', 'flyingBlue'],
-    tip: 'כאן הנקודות בדרך כלל שוות הכי הרבה: הטיסות יקרות, ו־United ו־Air Canada טסות מתל אביב או בקונקשן נוח. בדקו קודם מושבים בפרמיה, שם ההפרש גדול.',
+    yes: 'כאן הנקודות בדרך כלל שוות הכי הרבה: הטיסות יקרות, ו־United ו־Air Canada טסות מתל אביב או בקונקשן נוח. בדקו קודם מושבים בפרמיה, שם ההפרש גדול.',
+    no: 'לא להעביר ל־Southwest או JetBlue בשביל הקו מתל אביב. הן רלוונטיות רק לקטעים בתוך ארצות הברית.',
   },
   gulf: {
     programs: ['flyingBlue', 'united', 'aeroplan'],
-    tip: 'אמירייטס כבר לא שותפת העברה של Chase מאז אוקטובר 2025, אז אי אפשר להעביר אליה נקודות. השוו מול Chase Travel.',
+    yes: 'השוו בין מיילים של השותפות לבין Chase Travel, ובחרו לפי המחיר בסנט לנקודה.',
+    no: 'לא לתכנן העברה לאמירייטס: היא לא שותפה של Chase מאז אוקטובר 2025.',
   },
   far: {
     programs: ['aeroplan', 'united', 'flyingBlue', 'singapore'],
-    tip: 'לקו ארוך כמעט תמיד יש קונקשן. בדקו את מסלולי Star Alliance דרך Aeroplan ו־United, ובמחלקת עסקים הפער לעומת מזומן גדול במיוחד.',
+    yes: 'בקו ארוך בדקו מסלולי Star Alliance דרך Aeroplan ו־United. במחלקת עסקים הפער לעומת מזומן גדול במיוחד.',
+    no: 'לא להעביר נקודות לפני שבדקתם כמה עולים המיסים והתוספות בהזמנה במיילים.',
   },
 };
 
-const GENERAL_TIPS = [
-  'העברה ל־Airline היא חד־כיוונית. קודם מוצאים מושב פנוי באתר התוכנית, ורק אחר כך מעבירים.',
-  'כדאי לחכות למבצעי העברה ולמבצעי Promo Rewards של Flying Blue, אם אתם לא בלחץ זמן.',
-  'מיילים של El Al לא נקנים מ־Chase, וחברות הלואו־קוסט לא משתתפות, אז לרוב הטיסות הישירות הזולות הן לא שימוש טוב לנקודות.',
-  'Southwest ו־JetBlue לא טסות לתל אביב. הן רלוונטיות רק לקטעים בתוך ארצות הברית.',
-  'מ־1 באוקטובר 2026 העברה ל־World of Hyatt בסאפיר פרפרד היא ביחס 4:3, אז היא שווה פחות מבעבר.',
-  'קניות בנקודות שוות בדרך כלל פחות מסנט לנקודה, אז עדיף להימנע.',
+// Sources disagree on whether the card's rental car cover applies here, so these only ever get a warning
+const RENTAL_UNCLEAR = ['אירלנד', 'איטליה', 'אוסטרליה', 'ניו זילנד'];
+
+const DO_LIST = [
+  ['טיסות', 'מצאו קודם מושב פנוי באתר התוכנית, ורק אז העבירו נקודות. שווה לחכות למבצעי העברה ולמבצעי Promo Rewards של Flying Blue.'],
+  ['מלונות', 'הזמינו מלון אחד בשנה דרך Chase Travel כדי לנצל את הזיכוי השנתי של 100 דולר. הזמנות שם מזכות ב־5 נקודות לדולר.'],
+  ['דירות נופש', 'Airbnb ו־Vrbo מזכים ב־3 נקודות לדולר לפי עדכון הכרטיס מיוני 2026.'],
+  ['השכרת רכב', 'שלמו את כל ההשכרה בכרטיס וסרבו לביטוח CDW של החברה. לפי מדריך Chase הכיסוי ראשוני ועד 60,000 דולר.'],
+  ['מסעדות', 'שלמו בכרטיס ולא בנקודות: 3 נקודות לדולר, גם בחו״ל.'],
+  ['דלק וטעינה', '3 נקודות לדולר לפי עדכון הכרטיס מיוני 2026.'],
+  ['בחו״ל', 'שלמו בכרטיס בלי עמלת המרה, ובחרו תמיד לחייב במטבע המקומי ולא בשקלים או בדולרים של הקופה.'],
+  ['ביטוח נסיעה', 'שלמו את הטיסה והמלון בכרטיס כדי ליהנות מכיסוי לביטול, עיכוב ומזוודות. בדקו את התנאים במדריך ההטבות.'],
+  ['דמי השנתיים', 'אפשר לשלם אותם בנקודות ב־1.1 סנט דרך Pay Yourself Back עד 31.12.2026.'],
+  ['הטבות שקל לפספס', 'זיכוי של 120 דולר ל־Global Entry או TSA PreCheck כל 4 שנים, ומנוי שנה ל־Apple TV שצריך להפעיל עד 31.12.2026.'],
+];
+
+const DONT_LIST = [
+  ['העברות', 'לא להעביר נקודות "ליתר ביטחון". העברה היא חד־כיוונית ואי אפשר להחזיר אותה.'],
+  ['Hyatt', 'לא להעביר אוטומטית: מ־1.10.2026 היחס בסאפיר פרפרד הוא 4:3, אז היא שווה פחות מבעבר.'],
+  ['קניות', 'לא לשלם בנקודות בחנויות. בדרך כלל זה פחות מסנט לנקודה.'],
+  ['מסעדות', 'לא לממש נקודות כדי לכסות חשבון במסעדה. אין לכך מסלול משתלם שאימתנו, ועדיף לצבור 3 נקודות לדולר.'],
+  ['השכרת רכב', 'לא לקחת גם את ביטוח ה־CDW של החברה: לפי מדריך Chase צריך לסרב לו כדי שכיסוי הכרטיס יחול.'],
+  ['El Al', 'לא לחפש העברה ל־Matmid: אל על לא בין שותפות ההעברה של Chase.'],
 ];
 
 const $ = (id) => document.getElementById(id);
@@ -135,25 +155,33 @@ function render() {
     ? `<p class="muted">טיסה ב־${shekels(input.priceIls)} שווה בערך ${count(input.priceIls / usdIls * 100)} נקודות לפי סנט לנקודה.</p>` : '';
 
   let destination = '<p class="muted">בחרו יעד כדי לקבל המלצה מותאמת.</p>';
-  if (input.dest) {
-    const advice = REGION_ADVICE[regionFor(input.dest)];
+  const advice = input.dest ? REGION_ADVICE[regionFor(input.dest)] : null;
+  const rows = (list) => list.map(([label, text]) => `<li><strong>${esc(label)}:</strong> ${esc(text)}</li>`).join('');
+  const dontList = [...(advice ? [[`ל${input.dest.he}`, advice.no]] : []), ...DONT_LIST];
+  if (input.dest && RENTAL_UNCLEAR.includes(input.dest.country)) {
+    dontList.unshift(['השכרת רכב', `לא לסמוך על ביטוח הכרטיס ב${input.dest.country} לפני שבדקתם מול Chase. המקורות סותרים לגבי הכיסוי שם.`]);
+  }
+  if (advice) {
     const programs = advice.programs.map((key) => {
       const p = PROGRAMS[key];
       return `<a class="fl-airline-link no-link-icon" href="${p.url}" target="_blank" rel="noopener noreferrer" title="${esc(p.airlines)}">${esc(p.name)}</a>`;
     }).join('');
-    destination = `<h3>ל${esc(input.dest.he)}</h3><p>${esc(advice.tip)}</p>
+    destination = `<h3>ל${esc(input.dest.he)}</h3><p>${esc(advice.yes)}</p>
       <p class="muted">תוכניות שכדאי לבדוק בהן מושבים, כולן ביחס 1:1 מ־Chase:</p>
       <div class="fl-airlines">${programs}</div>`;
   }
 
   box.innerHTML = `<div class="fl-notice pt-verdict"><strong>${esc(verdict(input))}</strong></div>
+    <h2 class="pt-heading pt-yes">מה כן</h2>
     <h3>מה ${count(input.points)} הנקודות שוות</h3>
     <ol class="pt-options">${options}</ol>
     ${coverage}
     ${destination}
-    <h3>טיפים</h3>
-    <ul class="fl-tips">${GENERAL_TIPS.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>
-    <p class="muted pt-note">הערכה לפי כללי Chase לאוקטובר 2026, לא ייעוץ פיננסי. הערך בפועל מופיע בחשבון שלכם. נקודות ישנות הן נקודות שנצברו לפני ${LEGACY_CUTOFF}.</p>`;
+    <h3>בכל הנסיעה</h3>
+    <ul class="fl-tips">${rows(DO_LIST)}</ul>
+    <h2 class="pt-heading pt-no">מה לא</h2>
+    <ul class="fl-tips">${rows(dontList)}</ul>
+    <p class="muted pt-note">הערכה לפי כללי Chase לאוקטובר 2026, לא ייעוץ פיננסי. הטבות ותנאי הכרטיס יכולים להשתנות לפי מועד ההצטרפות, והערך בפועל מופיע בחשבון שלכם ובמדריך ההטבות. נקודות ישנות הן נקודות שנצברו לפני ${LEGACY_CUTOFF}.</p>`;
 }
 
 function init() {

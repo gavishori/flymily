@@ -289,3 +289,6 @@ html body[data-theme="dark"] .fl-calendar .fl-day.is-start, html body[data-theme
   .fl-form label.pt-half{ grid-column: span 6; }
   .pt-option{ flex-direction: column; align-items: flex-start; gap: 4px; }
 }
+.pt-heading{ margin: 28px 0 4px; padding-bottom: 6px; font-size: 1.35rem; border-bottom: 2px solid var(--border); }
+.pt-yes{ color: var(--ok); border-color: var(--ok); }
+.pt-no{ color: var(--danger); border-color: var(--danger); }
