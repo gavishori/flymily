@@ -7,6 +7,10 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   sendPasswordResetEmail,
+  GoogleAuthProvider,
+  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   setPersistence,
   browserLocalPersistence
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
@@ -94,6 +98,51 @@ export const FB = {
   deleteDoc,
   waitForPendingWrites: () => waitForPendingWrites(db)
 };
+
+// --- Google sign-in -----------------------------------------------------
+// Any [data-google-login] button. A Google account with the same email as an
+// existing email/password user stays the same Firebase user, so trips remain.
+const GOOGLE_ERRORS = {
+  'auth/operation-not-allowed': 'כניסה עם Google עדיין לא הופעלה ב-Firebase',
+  'auth/unauthorized-domain': 'הכתובת הזו לא מאושרת ב-Firebase',
+  'auth/network-request-failed': 'אין חיבור לרשת',
+  'auth/account-exists-with-different-credential': 'המייל הזה כבר רשום בשיטת כניסה אחרת'
+};
+const GOOGLE_SILENT = ['auth/popup-closed-by-user', 'auth/cancelled-popup-request'];
+
+export async function signInWithGoogle(){
+  const provider = new GoogleAuthProvider();
+  provider.setCustomParameters({ prompt: 'select_account' });
+  try {
+    return await signInWithPopup(auth, provider);
+  } catch (e) {
+    if (e?.code === 'auth/popup-blocked') return signInWithRedirect(auth, provider);
+    throw e;
+  }
+}
+
+function showGoogleError(btn, e){
+  if (GOOGLE_SILENT.includes(e?.code)) return;
+  const msg = GOOGLE_ERRORS[e?.code] || ('שגיאה בכניסה עם Google: ' + (e?.code || e?.message || e));
+  const target = document.getElementById(btn?.dataset.googleLogin);
+  if (target) target.textContent = msg;
+  console.error('google login failed', e);
+}
+
+getRedirectResult(auth).catch((e)=> showGoogleError(document.querySelector('[data-google-login]'), e));
+
+document.querySelectorAll('[data-google-login]').forEach((btn)=>{
+  btn.addEventListener('click', async (ev)=>{
+    ev.preventDefault();
+    const target = document.getElementById(btn.dataset.googleLogin);
+    if (target) target.textContent = '';
+    try {
+      await signInWithGoogle();
+      const authModal = document.getElementById('authModal');
+      if (authModal?.open) authModal.close();
+    } catch (e) { showGoogleError(btn, e); }
+  });
+});
 
 // Network toggles (optional resilience)
 window.addEventListener("offline", () => disableNetwork(db).catch(()=>{}));
