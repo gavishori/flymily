@@ -172,3 +172,36 @@ body[data-home-tab="flights"] #tripList{ display: none !important; }
 @media (max-width: 480px){
   .fl-form label:has(#flDepart), .fl-form label:has(#flReturn){ grid-column: span 6; }
 }
+
+/* ---------- Destination autocomplete ---------- */
+.fl-form label.fl-to{ position: relative; }
+.fl-suggest{
+  position: absolute; z-index: 20; top: 100%; inset-inline: 0; margin: 4px 0 0; padding: 6px;
+  list-style: none; background: var(--card);
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md);
+}
+.fl-suggest[hidden]{ display: none; }
+.fl-suggest li{
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 9px 10px; border-radius: 6px; color: var(--ink); font-weight: 500; cursor: pointer;
+}
+.fl-suggest li .muted{ font-weight: 400; font-size: 13px; }
+.fl-suggest li:hover, .fl-suggest li[aria-selected="true"]{ background: color-mix(in oklab, var(--brand) 10%, transparent); }
+
+/* ---------- Background search: pulse while running, dot when done ---------- */
+#homeTabs [data-home-tab="flights"], #btnAllTrips{ position: relative; }
+body[data-flight-search="running"] #homeTabs [data-home-tab="flights"]::after,
+body[data-flight-search="done"] #homeTabs [data-home-tab="flights"]::after,
+body[data-flight-search="done"] #btnAllTrips::after{
+  content: ""; position: absolute; top: 5px; inset-inline-end: 7px;
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--accent); box-shadow: 0 0 0 2px var(--card);
+}
+body[data-flight-search="running"] #homeTabs [data-home-tab="flights"]::after{
+  background: var(--brand); animation: flPulse 1.1s ease-in-out infinite;
+}
+@keyframes flPulse{ 50%{ opacity: .3; } }
+@media (prefers-reduced-motion: reduce){
+  body[data-flight-search="running"] #homeTabs [data-home-tab="flights"]::after{ animation: none; }
+}
