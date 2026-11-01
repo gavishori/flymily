@@ -74,7 +74,10 @@ body[data-home-tab="flights"] #tripControlsRow,
 body[data-home-tab="flights"] #tripList,
 body[data-home-tab="points"] #homeTripsHeader,
 body[data-home-tab="points"] #tripControlsRow,
-body[data-home-tab="points"] #tripList{ display: none !important; }
+body[data-home-tab="points"] #tripList,
+body[data-home-tab="hotels"] #homeTripsHeader,
+body[data-home-tab="hotels"] #tripControlsRow,
+body[data-home-tab="hotels"] #tripList{ display: none !important; }
 
 /* ---------- Home trip cards ---------- */
 .container.home-mode .trip-card{ border: 1px solid var(--border); box-shadow: none; }
@@ -292,3 +295,75 @@ html body[data-theme="dark"] .fl-calendar .fl-day.is-start, html body[data-theme
 .pt-heading{ margin: 28px 0 4px; padding-bottom: 6px; font-size: 1.35rem; border-bottom: 2px solid var(--border); }
 .pt-yes{ color: var(--ok); border-color: var(--ok); }
 .pt-no{ color: var(--danger); border-color: var(--danger); }
+
+/* ---------- Flight form fits one screen ---------- */
+#flightPanel .fl-hero{ padding: 16px 22px 44px; }
+#flightPanel .fl-hero h2{ font-size: 1.35rem; margin: 0 0 2px; }
+#flightPanel .fl-hero p{ font-size: 14px; }
+#flightForm{ margin-top: -32px; padding: 14px 16px; gap: 10px; grid-template-columns: repeat(12, 1fr); }
+#flightForm label{ grid-column: span 2; }
+#flightForm label.fl-to, #flightForm .fl-dates{ grid-column: span 6; }
+#flightForm label:has(#flDepartTime), #flightForm label:has(#flReturnTime){ grid-column: span 3; }
+#flightForm label.fl-check{ grid-column: span 4; font-size: 14px; }
+#flightForm #flSubmit{ grid-column: span 12; min-height: 44px; }
+#flightForm .input{ min-height: 42px; }
+.home-tabs{ margin-bottom: 12px; }
+@media (max-width: 820px){
+  #flightPanel .fl-hero{ padding: 12px 16px 38px; }
+  #flightPanel .fl-hero h2{ font-size: 1.15rem; }
+  #flightPanel .fl-hero p{ display: none; }
+  #flightForm{ margin-inline: 8px; padding: 10px 12px; gap: 6px 8px; }
+  #flightForm label.fl-to, #flightForm .fl-dates{ grid-column: span 12; }
+  #flightForm label:has(#flDepartTime), #flightForm label:has(#flReturnTime){ grid-column: span 6; }
+  #flightForm label{ grid-column: span 4; font-size: 12px; gap: 2px; }
+  #flightForm label.fl-check{ grid-column: span 4; font-size: 12px; align-items: flex-start; gap: 4px; }
+  #flightForm .input{ min-height: 38px; padding-block: 4px; }
+  #flightForm #flSubmit{ min-height: 40px; }
+  .home-tabs{ margin-bottom: 8px; }
+  .home-tabs button{ min-height: 36px; padding: 4px; font-size: 14px; }
+}
+
+/* ---------- Hotels: list and map side by side ---------- */
+.hotel-panel[hidden]{ display: none; }
+.ht-form{
+  display: grid; grid-template-columns: 3fr 3fr 1fr 1fr 2fr; gap: 10px; align-items: end;
+  padding: 12px 14px; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+}
+.ht-form > label{ display: grid; gap: 4px; font-size: 13px; font-weight: 600; color: var(--muted); min-width: 0; }
+.ht-to{ position: relative; }
+.ht-form .input{ color: var(--ink); background: var(--card); min-height: 42px; }
+#htDateBtn{ text-align: start; font-weight: 600; color: var(--ink); background: var(--card); cursor: pointer; }
+#htDateBtn.is-empty{ color: var(--muted); font-weight: 400; }
+.ht-dates{ grid-column: auto; }
+#htSubmit{ min-height: 42px; }
+#htSubmit:disabled{ opacity: .6; cursor: wait; }
+.ht-filters{ grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px 22px; }
+.ht-filters .fl-check{ display: flex; align-items: center; gap: 6px; font-size: 14px; color: var(--ink); }
+.ht-filters input{ width: 18px; height: 18px; min-height: 0; }
+.hotel-panel .fl-status{ margin: 8px 4px; min-height: 1.2em; }
+.ht-split{ display: grid; grid-template-columns: 1fr 1fr; gap: 12px; height: calc(100dvh - 300px); min-height: 360px; }
+.ht-list{ display: grid; align-content: start; gap: 10px; overflow-y: auto; padding-inline-end: 4px; }
+.ht-map{ border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; z-index: 0; }
+.ht-card{
+  display: flex; gap: 12px; padding: 10px; cursor: pointer;
+  background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-sm);
+}
+.ht-card.is-active{ border-color: var(--brand); box-shadow: 0 0 0 1px var(--brand); }
+.ht-image{ flex: none; width: 110px; height: 110px; object-fit: cover; border-radius: 8px; }
+.ht-body{ display: grid; gap: 3px; min-width: 0; align-content: start; }
+.ht-body .muted{ font-size: 13px; }
+.ht-price{ font-weight: 700; }
+.ht-badges{ display: flex; flex-wrap: wrap; gap: 4px; }
+.ht-badge{
+  padding: 1px 8px; border-radius: var(--radius-pill); font-size: 12px; font-weight: 600;
+  background: color-mix(in oklab, var(--ok) 14%, transparent); color: var(--ok);
+}
+.ht-body .btn{ justify-self: start; min-height: 34px; padding: 4px 12px; font-size: 13px; margin-top: 4px; }
+@media (max-width: 820px){
+  .ht-form{ grid-template-columns: 1fr 1fr; }
+  .ht-to, .ht-dates, #htSubmit{ grid-column: 1 / -1; }
+  .ht-split{ grid-template-columns: 1fr; height: auto; }
+  .ht-map{ order: -1; height: 38dvh; }
+  .ht-list{ overflow: visible; }
+  .ht-image{ width: 84px; height: 84px; }
+}

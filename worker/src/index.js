@@ -10,6 +10,9 @@
 //   With &stream=1 the answer is one JSON object per line: { stage, done, total, final } while it works,
 //   then { result } or { error }.
 //
+// GET /hotels?place=Seattle&checkIn=2026-12-01&checkOut=2026-12-05&adults=2&children=0
+//     &available=1&freeCancel=1&breakfast=1&wellness=1   →   { hotels, hidden, searchesLeft }
+//
 // SERPAPI_KEY is a Worker secret: npx wrangler secret put SERPAPI_KEY
 
 const ORIGIN_AIRPORT = "TLV";
@@ -22,6 +25,9 @@ const MAX_LEG_REPEATS = 2;   // so the five results aren't one flight paired fiv
 const MAX_VERIFY_CALLS = 10; // each airline-price check costs one SerpApi search
 const MAX_VERIFY_CALLS_FLEX = 16; // most fares fail the free-change test, so more have to be checked
 const MAX_TRICKS = 2;        // each trick shown costs two airline checks
+const NEARBY_DAYS = [-3, -2, -1, 1, 2, 3];
+const NEARBY_CHECKS = 2;     // nearby dates are only suggested once the airline's own price confirms the saving
+const FREE_BREAKFAST_AMENITY = 9; // Google Hotels' amenity id
 const MIN_CONNECTION_MIN = 180;
 const MAX_CONNECTION_MIN = 20 * 60;
 
@@ -36,6 +42,7 @@ export default {
 
     const url = new URL(request.url);
     try {
+      if (url.pathname === "/hotels") return reply(await hotels(readHotelQuery(url), env), 200, headers);
       const query = readQuery(url);
       if (url.pathname === "/search") {
         if (url.searchParams.get("stream") === "1") return streamSearch(query, env, ctx, headers);
@@ -98,6 +105,108 @@ function readQuery(url) {
   };
 }
 
+function shiftDay(day, delta) {
+  const date = new Date(day + "T00:00:00Z");
+  date.setUTCDate(date.getUTCDate() + delta);
+  return date.toISOString().slice(0, 10);
+}
+
+// Same trip length, up to three days earlier or later. The dates' list prices only pick what to check;
+// a date is suggested only if the airline's own offer beats today's best.
+async function cheaperNearbyDates(q, baseline, env, report) {
+  const today = new Date().toISOString().slice(0, 10);
+  const days = NEARBY_DAYS.map(delta => ({ depart: shiftDay(q.depart, delta), back: q.back ? shiftDay(q.back, delta) : "" }))
+    .filter(d => d.depart >= today);
+  let looked = 0;
+  report("dates", 0, days.length);
+
+  const priced = await Promise.all(days.map(async (d) => {
+    const params = q.back ? roundTripParams({ ...q, ...d }) : oneWayParams(ORIGIN_AIRPORT, q.to, d.depart, q, q.departTimes);
+    const raw = await serp(params, env).catch(() => null);
+    report("dates", ++looked, days.length);
+    const flight = raw && readFlights(raw)[0];
+    return flight && flight.price < baseline ? { ...d, params, flight } : null;
+  }));
+
+  const candidates = priced.filter(Boolean).sort((a, b) => a.flight.price - b.flight.price).slice(0, NEARBY_CHECKS);
+  let found = null;
+  for (const c of candidates) {
+    const offer = await nearbyOffer(c, q, env).catch(() => null);
+    if (!offer) continue;
+    const total = offer.price + offer.bagCost;
+    if (total < baseline) {
+      found = { depart: c.depart, back: c.back, total, saving: Number.isFinite(baseline) ? baseline - total : null, seller: offer.seller };
+      break;
+    }
+  }
+  report("dates", days.length, days.length, true);
+  return found;
+}
+
+async function nearbyOffer({ params, flight }, q, env) {
+  if (!q.back) return flight.token ? airlineOffer(flight.token, params, q, env, 1) : null;
+  const returns = await serp({ ...params, departure_token: flight.departureToken }, env);
+  const homeward = readFlights(returns)[0];
+  return homeward?.token ? airlineOffer(homeward.token, params, q, env, 2) : null;
+}
+
+function readHotelQuery(url) {
+  const p = url.searchParams;
+  const place = (p.get("place") || "").trim();
+  if (!/^[\p{L}\p{N} .,'’-]{2,60}$/u.test(place)) throw new BadRequest("place");
+  const checkIn = p.get("checkIn") || "";
+  const checkOut = p.get("checkOut") || "";
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(checkIn)) throw new BadRequest("checkIn");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(checkOut) || checkOut <= checkIn) throw new BadRequest("checkOut");
+  const adults = Number(p.get("adults") || 2);
+  const children = Number(p.get("children") || 0);
+  if (!(adults >= 1 && adults <= 9)) throw new BadRequest("adults");
+  if (!(children >= 0 && children <= 6)) throw new BadRequest("children");
+  return {
+    place, checkIn, checkOut, adults, children,
+    available: p.get("available") !== "0",
+    freeCancel: p.get("freeCancel") === "1",
+    breakfast: p.get("breakfast") === "1",
+    wellness: p.get("wellness") === "1",
+  };
+}
+
+// Google Hotels has no filter for these, so they're read from each hotel's own list of amenities
+const WELLNESS = [[/jacuzzi|hot tub|whirlpool/i, "ג׳קוזי"], [/sauna/i, "סאונה"]];
+
+function readHotel(h) {
+  const amenities = h.amenities || [];
+  const text = [h.name, ...amenities].join(" | ");
+  return {
+    name: h.name,
+    lat: h.gps_coordinates?.latitude ?? null,
+    lng: h.gps_coordinates?.longitude ?? null,
+    nightly: h.rate_per_night?.extracted_lowest ?? null,
+    total: h.total_rate?.extracted_lowest ?? null,
+    rating: h.overall_rating ?? null,
+    reviews: h.reviews ?? null,
+    image: h.images?.[0]?.thumbnail ?? null,
+    link: h.link || null,
+    freeCancel: (h.prices || []).some(price => price.free_cancellation),
+    breakfast: amenities.some(a => /breakfast/i.test(a)),
+    wellness: WELLNESS.filter(([pattern]) => pattern.test(text)).map(([, label]) => label),
+  };
+}
+
+async function hotels(q, env) {
+  const raw = await serp({
+    engine: "google_hotels", gl: "il", hl: "en", currency: "ILS",
+    q: q.wellness ? `hotels with hot tub or sauna in ${q.place}` : `hotels in ${q.place}`,
+    check_in_date: q.checkIn, check_out_date: q.checkOut, adults: q.adults, children: q.children,
+    ...(q.children && { children_ages: Array(q.children).fill(8).join(",") }),
+    ...(q.freeCancel && { free_cancellation: "true" }),
+    ...(q.breakfast && { amenities: FREE_BREAKFAST_AMENITY }),
+  }, env);
+  const all = (raw.properties || []).map(readHotel);
+  const kept = all.filter(h => (!q.available || h.nightly != null) && (!q.wellness || h.wellness.length));
+  return { hotels: kept, hidden: all.length - kept.length, searchesLeft: await searchesLeft(env) };
+}
+
 function streamSearch(q, env, ctx, headers) {
   const { readable, writable } = new TransformStream();
   const writer = writable.getWriter();
@@ -145,10 +254,12 @@ async function search(q, env, report = () => {}) {
     keepAirlineSold(candidates, q, env, report),
     q.tricks ? findTricks(q, out.flights, back?.flights, env, report) : [],
   ]);
+  const nearby = await cheaperNearbyDates(q, results[0]?.total ?? Infinity, env, report);
   return {
     currency: "ILS",
     results,
     tricks,
+    nearby,
     hiddenAgentOnly,
     hiddenByTerms,
     hiddenUnchecked,

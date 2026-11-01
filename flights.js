@@ -4,7 +4,7 @@
 const FLIGHTS_API = 'https://flymily-flights.gavishori.workers.dev';
 const DEFAULT_TAB_KEY = 'flymilyHomeTab';
 const MAX_SUGGESTIONS = 7;
-const STAGES = { search: 'מחפש טיסות', verify: 'מאמת מחירים מול החברות', tricks: 'בודק קונקשנים', ready: 'מסכם תוצאות' };
+const STAGES = { search: 'מחפש טיסות', verify: 'מאמת מחירים מול החברות', tricks: 'בודק קונקשנים', dates: 'בודק 3 ימים לפני ואחרי', ready: 'מסכם תוצאות' };
 
 // Cities with several airports search all of them, which often finds the cheaper low-cost one
 const DESTINATIONS = [
@@ -227,6 +227,7 @@ function startProgress(tricks) {
   progress.started = Date.now();
   progress.stages = { search: { state: 'active' }, verify: { state: 'pending' } };
   if (tricks) progress.stages.tricks = { state: 'pending' };
+  progress.stages.dates = { state: 'pending' };
   progress.stages.ready = { state: 'pending' };
   drawTimeline();
   tickProgress();
@@ -240,8 +241,7 @@ function applyProgress({ stage, done, total, final }) {
   if (final) s.seconds = seconds();
   // Price checks and connections start together once the flight list is in
   if (stage === 'search' && final) {
-    Object.values(progress.stages).forEach((other) => { if (other.state === 'pending') other.state = 'active'; });
-    progress.stages.ready.state = 'pending';
+    for (const name of ['verify', 'tricks']) if (progress.stages[name]) progress.stages[name].state = 'active';
   }
   if (Object.entries(progress.stages).every(([k, v]) => k === 'ready' || v.state === 'done')) progress.stages.ready.state = 'active';
   drawTimeline();
@@ -280,6 +280,13 @@ async function readSearch(response) {
   }
 }
 
+function nearbyTip(nearby) {
+  if (!nearby) return '';
+  const dates = nearby.back ? `${shortDay(nearby.depart)} – ${shortDay(nearby.back)}` : shortDay(nearby.depart);
+  const saving = nearby.saving ? `, חיסכון של ${money(nearby.saving)}` : '';
+  return `<div class="fl-notice pt-verdict"><strong>המלצה: ב־${esc(dates)} זה יוצא ${money(nearby.total)} ישירות ב־${esc(nearby.seller)}${saving}.</strong></div>`;
+}
+
 function showResults(data, q, dest) {
   if (data.results[0]) {
     document.dispatchEvent(new CustomEvent('flymily:cheapest', { detail: { total: data.results[0].total, destination: dest.he } }));
@@ -291,6 +298,7 @@ function showResults(data, q, dest) {
       <h3>${data.results.length ? `${data.results.length} הטיסות הזולות לכיוון ${esc(dest.he)}` : `לא נמצאו טיסות ישירות מהחברות ל${esc(dest.he)}`}</h3>
       ${data.searchesLeft != null ? `<span class="muted">נותרו ${data.searchesLeft} שאילתות החודש</span>` : ''}
     </div>
+    ${nearbyTip(data.nearby)}
     <div class="fl-cards">${cards}</div>
     ${data.tricks?.length ? `<h3>טריקים עם קונקשן</h3><div class="fl-cards">${data.tricks.map((t) => trickCard(t, q)).join('')}</div>` : ''}
     <h3>המלצות</h3>
@@ -386,6 +394,8 @@ function setHomeTab(tab) {
   });
   $('flightPanel').hidden = tab !== 'flights';
   $('pointsPanel').hidden = tab !== 'points';
+  $('hotelPanel').hidden = tab !== 'hotels';
+  document.dispatchEvent(new CustomEvent('flymily:tab', { detail: tab }));
   try { localStorage.setItem(DEFAULT_TAB_KEY, tab); } catch (_) {}
   clearDoneDot();
   drawProgressPill();
@@ -417,11 +427,7 @@ const shortDay = (key) => dayFromKey(key).toLocaleDateString('he-IL', { day: 'nu
 
 // One calendar for both dates: the first click sets the departure, the next sets the return on the same grid.
 // The chosen days live in the hidden #flDepart and #flReturn.
-function wireCalendar() {
-  const panel = $('flCalendar');
-  const button = $('flDateBtn');
-  const depart = $('flDepart');
-  const back = $('flReturn');
+function wireCalendar({ panel, button, depart, back, emptyLabel = 'יציאה וחזרה', firstHint = 'בחרו תאריך יציאה', secondHint = 'עכשיו בחרו תאריך חזרה', allowOneWay = true }) {
   const today = dayKey(new Date());
   const thisMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
   let shown = thisMonth;
@@ -456,7 +462,7 @@ function wireCalendar() {
       el.setAttribute('aria-pressed', key === start || key === back.value ? 'true' : 'false');
     });
     const hint = panel.querySelector('.fl-cal-hint');
-    if (hint) hint.textContent = !start || back.value ? 'בחרו תאריך יציאה' : 'עכשיו בחרו תאריך חזרה';
+    if (hint) hint.textContent = !start || back.value ? firstHint : secondHint;
     const oneWay = panel.querySelector('[data-cal="one-way"]');
     if (oneWay) oneWay.disabled = !start;
   };
@@ -471,15 +477,15 @@ function wireCalendar() {
       <div class="fl-months" style="grid-template-columns:repeat(${months.length},1fr)">${months.map(monthHtml).join('')}</div>
       <div class="fl-cal-foot">
         <button type="button" data-cal="clear">ניקוי</button>
-        <button type="button" data-cal="one-way">כיוון אחד</button>
+        ${allowOneWay ? '<button type="button" data-cal="one-way">כיוון אחד</button>' : ''}
       </div>`;
     paint();
   };
 
   const syncButton = () => {
-    button.textContent = !depart.value ? 'יציאה וחזרה'
+    button.textContent = !depart.value ? emptyLabel
       : back.value ? `${shortDay(depart.value)} – ${shortDay(back.value)}`
-      : `${shortDay(depart.value)} · כיוון אחד`;
+      : `${shortDay(depart.value)} · ${allowOneWay ? 'כיוון אחד' : secondHint}`;
     button.classList.toggle('is-empty', !depart.value);
   };
 
@@ -538,7 +544,7 @@ function wireCalendar() {
   });
   window.addEventListener('resize', () => { if (!panel.hidden) draw(); });
   document.addEventListener('pointerdown', (ev) => {
-    if (!panel.hidden && !ev.target.closest('.fl-dates')) close();
+    if (!panel.hidden && ev.target.closest('.fl-dates') !== panel.closest('.fl-dates')) close();
   });
   document.addEventListener('keydown', (ev) => {
     if (ev.key === 'Escape' && !panel.hidden) { close(); button.focus(); }
@@ -603,8 +609,8 @@ function wireAutocomplete(input, list) {
 
 function init() {
   wireAutocomplete($('flTo'), $('flSuggest'));
-  window.flymilyDest = { wire: wireAutocomplete, find: findDestination };
-  wireCalendar();
+  window.flymilyDest = { wire: wireAutocomplete, find: findDestination, calendar: wireCalendar };
+  wireCalendar({ panel: $('flCalendar'), button: $('flDateBtn'), depart: $('flDepart'), back: $('flReturn') });
   $('flightForm').addEventListener('submit', runSearch);
   document.querySelectorAll('#homeTabs [data-home-tab]').forEach((b) => {
     b.addEventListener('click', () => setHomeTab(b.dataset.homeTab));
