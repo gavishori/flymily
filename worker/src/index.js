@@ -202,7 +202,8 @@ async function hotels(q, env) {
     ...(q.freeCancel && { free_cancellation: "true" }),
     ...(q.breakfast && { amenities: FREE_BREAKFAST_AMENITY }),
   }, env);
-  const all = (raw.properties || []).map(readHotel);
+  // With the filter on, Google has already confirmed free cancellation for every hotel it returns
+  const all = (raw.properties || []).map(readHotel).map(h => (q.freeCancel ? { ...h, freeCancel: true } : h));
   const kept = all.filter(h => (!q.available || h.nightly != null) && (!q.wellness || h.wellness.length));
   return { hotels: kept, hidden: all.length - kept.length, searchesLeft: await searchesLeft(env) };
 }
