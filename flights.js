@@ -223,11 +223,11 @@ function tickProgress() {
   setTitle(`✈ ${STAGES[activeStage()] || 'מחפש'} ${seconds()} שנ׳`);
 }
 
-function startProgress(tricks) {
+function startProgress(tricks, nearby) {
   progress.started = Date.now();
   progress.stages = { search: { state: 'active' }, verify: { state: 'pending' } };
   if (tricks) progress.stages.tricks = { state: 'pending' };
-  progress.stages.dates = { state: 'pending' };
+  if (nearby) progress.stages.dates = { state: 'pending' };
   progress.stages.ready = { state: 'pending' };
   drawTimeline();
   tickProgress();
@@ -327,14 +327,14 @@ async function runSearch(ev) {
   if (!q.depart) { status.textContent = 'בחרו תאריך יציאה.'; return; }
   if (q.infants > q.adults) { status.textContent = 'כל תינוק צריך מבוגר אחד לפחות.'; return; }
 
-  const params = new URLSearchParams({ ...q, tricks: $('flTricks').checked ? '1' : '0', stream: '1' });
+  const params = new URLSearchParams({ ...q, tricks: $('flTricks').checked ? '1' : '0', nearby: $('flNearby').checked ? '1' : '0', stream: '1' });
   if ($('flDepartTime').value) params.set('departTimes', $('flDepartTime').value);
   if ($('flReturnTime').value) params.set('returnTimes', $('flReturnTime').value);
   const button = $('flSubmit');
   button.disabled = true;
   document.body.dataset.flightSearch = 'running';
   $('flResults').innerHTML = '';
-  startProgress($('flTricks').checked);
+  startProgress($('flTricks').checked, $('flNearby').checked);
   let failed = true;
   try {
     const r = await api(`/search?${params}`);

@@ -5,6 +5,7 @@
 //
 // GET /search?to=LHR,LGW&depart=2026-12-01&return=2026-12-08&adults=2&children=0&infants=0&tricks=1
 //     optional departTimes=5,11 and returnTimes=18,23: first and last takeoff hour on each direction
+//     optional nearby=1 also checks three days either side of the dates (six more queries, plus up to four to confirm)
 //     optional bag=1 adds one checked bag per passenger; flex=1 keeps only fares with a free change or full refund
 //   → { results, tricks, insights, hiddenAgentOnly, hiddenByTerms, hiddenUnchecked, searchesLeft }
 //   With &stream=1 the answer is one JSON object per line: { stage, done, total, final } while it works,
@@ -100,6 +101,7 @@ function readQuery(url) {
     children: count("children", 0, 8),
     infants: count("infants", 0, 4),
     tricks: p.get("tricks") === "1",
+    nearby: p.get("nearby") === "1",
     bag: p.get("bag") === "1",
     flex: p.get("flex") === "1",
   };
@@ -255,7 +257,7 @@ async function search(q, env, report = () => {}) {
     keepAirlineSold(candidates, q, env, report),
     q.tricks ? findTricks(q, out.flights, back?.flights, env, report) : [],
   ]);
-  const nearby = await cheaperNearbyDates(q, results[0]?.total ?? Infinity, env, report);
+  const nearby = q.nearby ? await cheaperNearbyDates(q, results[0]?.total ?? Infinity, env, report) : null;
   return {
     currency: "ILS",
     results,

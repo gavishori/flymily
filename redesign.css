@@ -304,7 +304,7 @@ html body[data-theme="dark"] .fl-calendar .fl-day.is-start, html body[data-theme
 #flightForm label{ grid-column: span 2; }
 #flightForm label.fl-to, #flightForm .fl-dates{ grid-column: span 6; }
 #flightForm label:has(#flDepartTime), #flightForm label:has(#flReturnTime){ grid-column: span 3; }
-#flightForm label.fl-check{ grid-column: span 4; font-size: 14px; }
+#flightForm label.fl-check{ grid-column: span 3; font-size: 14px; }
 #flightForm #flSubmit{ grid-column: span 12; min-height: 44px; }
 #flightForm .input{ min-height: 42px; }
 .home-tabs{ margin-bottom: 12px; }
@@ -316,7 +316,7 @@ html body[data-theme="dark"] .fl-calendar .fl-day.is-start, html body[data-theme
   #flightForm label.fl-to, #flightForm .fl-dates{ grid-column: span 12; }
   #flightForm label:has(#flDepartTime), #flightForm label:has(#flReturnTime){ grid-column: span 6; }
   #flightForm label{ grid-column: span 4; font-size: 12px; gap: 2px; }
-  #flightForm label.fl-check{ grid-column: span 4; font-size: 12px; align-items: flex-start; gap: 4px; }
+  #flightForm label.fl-check{ grid-column: span 6; font-size: 12px; align-items: flex-start; gap: 4px; }
   #flightForm .input{ min-height: 38px; padding-block: 4px; }
   #flightForm #flSubmit{ min-height: 40px; }
   .home-tabs{ margin-bottom: 8px; }
