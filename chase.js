@@ -125,16 +125,54 @@ async function toExpense(item) {
   };
 }
 
+const AUTO_NOTES = ['מצ׳ייס, אוטומטית', 'מזומן, מדף השיתוף'];
+
+// What the shared page should show for an item copied into the trip, given the trip's own expense now
+function ownerVersion(expense) {
+  const note = String(expense.desc || '').trim();
+  return {
+    amount: Math.round((Number(expense.amount) || 0) * 100) / 100,
+    currency: expense.currency,
+    title: expense.title,
+    category: expense.category,
+    note: AUTO_NOTES.includes(note) ? '' : note.slice(0, 160),
+  };
+}
+
+// Edits and deletions made in the trip go back to the feed, so the shared page matches. Only items that
+// actually differ are sent.
+async function syncBack(id, expenses, imported, feedItems) {
+  const changes = [];
+  for (const item of feedItems) {
+    if (!imported[item.id]) continue;
+    const expense = expenses[item.id];
+    if (!expense) { changes.push({ id: item.id, deleted: true }); continue; }
+    const mine = ownerVersion(expense);
+    const differs = mine.amount !== item.amount || mine.currency !== item.currency || mine.title !== item.title
+      || mine.category !== item.category || mine.note !== (item.note || '');
+    if (differs) changes.push({ id: item.id, ...mine });
+  }
+  if (!changes.length) return;
+  const r = await ownerFetch(`/trips/${id}/sync`, { method: 'POST', body: JSON.stringify({ items: changes }) });
+  if (!r.ok) throw new Error(r.status);
+}
+
+async function feedItems(id) {
+  const r = await ownerFetch(`/trips/${id}/feed`);
+  if (r.status === 404) return null;
+  if (!r.ok) throw new Error(r.status);
+  return (await r.json()).items;
+}
+
 // Each feed item is copied once. `externalImported` remembers it even if it's later deleted from the trip,
 // so a deletion sticks.
 async function importFeed(id) {
   if (window.state?.shared?.readOnly || !window.auth?.currentUser) return;
-  const r = await ownerFetch(`/trips/${id}/feed`);
-  if (r.status === 404) return;
-  if (!r.ok) throw new Error(r.status);
-  const { items } = await r.json();
+  const items = await feedItems(id);
+  if (!items) return;
   const t = trip();
   const done = t.externalImported || {};
+  await syncBack(id, t.expenses || {}, done, items).catch((e) => console.warn('feed sync failed', e));
   const fresh = items.filter((i) => !done[i.id] && !(t.expenses || {})[i.id]);
   if (!fresh.length || tripId() !== id) return;
   const patch = {};
@@ -182,6 +220,15 @@ function insertCard() {
   $('feedCopyScript').addEventListener('click', () => copyScript().catch(() => { $('feedStatus').textContent = 'לא הצלחנו להעתיק את הסקריפט.'; }));
   $('feedCopyManifest').addEventListener('click', () => copyManifest().catch(() => { $('feedStatus').textContent = 'לא הצלחנו להעתיק.'; }));
 }
+
+// An expense was just saved in the trip; app.js doesn't reload the trip for that, so sync here
+document.addEventListener('flymily:expenses-saved', async ({ detail }) => {
+  if (window.state?.shared?.readOnly || !window.auth?.currentUser) return;
+  try {
+    const items = await feedItems(detail.id);
+    if (items) await syncBack(detail.id, detail.expenses || {}, detail.externalImported || {}, items);
+  } catch (e) { console.warn('feed sync failed', e); }
+});
 
 document.addEventListener('flymily:trip-loaded', ({ detail }) => {
   if (linked?.tripId !== detail.id) linked = null;

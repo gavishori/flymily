@@ -4400,6 +4400,7 @@ async function saveExpense(){
   };
 
   await FB.updateDoc(ref, { expenses: t.expenses, rates: t.rates });
+  document.dispatchEvent(new CustomEvent('flymily:expenses-saved', { detail: { id: state.currentTripId, expenses: t.expenses, externalImported: t.externalImported } }));
   $('#expenseModal').close();
   showToast('ההוצאה נשמרה');
   await loadTrip();

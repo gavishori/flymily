@@ -3,6 +3,7 @@
 //
 // POST /trips/:id/link      owner, signed in to FLYMILY   → { shareToken, ingestKey }   creates or updates the trip's link
 // GET  /trips/:id/feed      owner, signed in to FLYMILY   → { items }
+// POST /trips/:id/sync      owner, signed in to FLYMILY   → { updated, removed }   the owner's edits and deletions
 // POST /chase               Gmail script, X-Ingest-Key     → { added }
 // GET  /shared/:token       anyone with the link           → { trip, items }
 // POST /shared/:token/cash  anyone with the link           → { item }
@@ -41,6 +42,7 @@ export async function feedsRoute(request, url, env) {
   if (path === "/chase" && method === "POST") return ingestChase(request, env);
   if ((m = path.match(/^\/trips\/([\w-]{1,64})\/link$/)) && method === "POST") return createLink(request, m[1], env);
   if ((m = path.match(/^\/trips\/([\w-]{1,64})\/feed$/)) && method === "GET") return ownerFeed(request, m[1], env);
+  if ((m = path.match(/^\/trips\/([\w-]{1,64})\/sync$/)) && method === "POST") return syncFromOwner(request, m[1], env);
   if ((m = path.match(/^\/shared\/([a-f0-9]{32})$/)) && method === "GET") return sharedTrip(m[1], env);
   if ((m = path.match(/^\/shared\/([a-f0-9]{32})\/cash$/)) && method === "POST") return addCash(request, m[1], env);
   return null;
@@ -144,6 +146,38 @@ async function ownerFeed(request, tripId, env) {
   await requireOwner(request, tripId);
   await tripMeta(env, tripId);
   return [{ items: await listItems(env, tripId) }, 200];
+}
+
+// The owner edited or deleted copied items in the trip. Only items already in the feed change; a zero
+// amount is allowed, for a purchase kept on record but not counted.
+async function syncFromOwner(request, tripId, env) {
+  await requireOwner(request, tripId);
+  await tripMeta(env, tripId);
+  const body = await readJson(request);
+  const changes = Array.isArray(body.items) ? body.items.slice(0, MAX_BATCH) : [];
+  const current = new Map((await listItems(env, tripId)).map(i => [i.id, i]));
+  let updated = 0, removed = 0;
+  for (const change of changes) {
+    const item = current.get(change?.id);
+    if (!item) continue;
+    if (change.deleted) {
+      await env.FEEDS.delete(`item:${tripId}:${item.id}`);
+      removed++;
+      continue;
+    }
+    const amount = Math.round(Number(change.amount) * 100) / 100;
+    if (!(amount >= 0 && amount < 100_000) || !CURRENCIES.includes(change.currency)) continue;
+    await putItem(env, tripId, {
+      ...item,
+      amount,
+      currency: change.currency,
+      title: text(change.title, 80) || item.title,
+      category: CATEGORIES.includes(change.category) ? change.category : item.category,
+      note: text(change.note, 160),
+    });
+    updated++;
+  }
+  return [{ updated, removed }, 200];
 }
 
 // ---------- The Gmail script ----------

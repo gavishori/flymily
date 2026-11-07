@@ -63,6 +63,7 @@ function renderItems(items) {
     ${list.map((i) => `<div class="item">
       <div class="what">
         <div class="title">${esc(i.title)}</div>
+        ${i.note ? `<div class="note">${esc(i.note)}</div>` : ''}
         <div class="meta">${new Date(i.at).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })} · ${esc(i.category)}
           <span class="tag${i.source === 'cash' ? ' cash' : ''}">${i.source === 'cash' ? 'מזומן' : 'צ׳ייס'}</span></div>
       </div>
