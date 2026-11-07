@@ -374,3 +374,46 @@ html body[data-theme="dark"] .fl-calendar .fl-day.is-start, html body[data-theme
 #card-feed .feed-steps{ margin: 12px 0 0; padding-inline-start: 20px; display: grid; gap: 8px; line-height: 1.6; }
 #card-feed .feed-steps .btn{ min-height: 32px; padding: 2px 12px; font-size: 13px; }
 #card-feed .feed-status{ min-height: 1.3em; margin-top: 10px; color: var(--brand); }
+
+/* ---------- Share screen: every card visible at once, no scrolling ----------
+   html body raises these above the many style.css variants (desktop, mobile-ui, cards.share-grid). */
+html body #view-share .share-page{ max-width: 1680px; padding: 10px 14px; }
+html body #view-share .share-head{ margin-bottom: 10px; }
+html body #view-share .share-head h2{ font-size: 1.15rem; }
+html body #view-share .share-head .muted{ display: none; }
+html body #view-share .share-grid{
+  display: grid !important; gap: 12px; align-items: start;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(0, 1.5fr) !important;
+}
+html body #view-share .share-card{ padding: 0 0 12px; gap: 8px; min-width: 0; overflow: hidden; }
+html body #view-share .share-card-head{ padding: 10px 14px; margin: 0; }
+html body #view-share .share-card-head h3{ font-size: 15px; }
+html body #view-share .share-card > *:not(.share-card-head){ margin-inline: 12px; }
+html body #view-share .share-actions{ display: grid; gap: 6px; }
+html body #view-share .share-actions button.btn, html body #view-share .share-actions .btn{ height: 36px; min-height: 36px; font-size: 14px; }
+html body #view-share .share-actions-wide{ grid-template-columns: 1fr 1fr; }
+html body #view-share .share-inline{ margin-top: 8px; }
+#card-feed > p{ margin-block: 0; font-size: 14px; line-height: 1.45; }
+#card-feed .feed-row{ margin-top: 0; }
+#card-feed .feed-steps{ margin-top: 0; gap: 4px; font-size: 13.5px; line-height: 1.5; }
+#card-feed .feed-status{ margin-top: 0; font-size: 13px; }
+html body #view-share #card-feed .btn{ width: auto !important; height: 32px !important; min-height: 32px !important; padding: 2px 14px !important; font-size: 13px !important; }
+html body #view-share #card-feed #feedCreate{ width: 100% !important; height: 36px !important; min-height: 36px !important; font-size: 14px !important; }
+#card-feed .feed-row{ align-items: center; }
+#card-feed .feed-row .input{ min-height: 34px; padding-block: 4px; }
+/* Narrower screens: the feed card takes its own row, with the setup steps beside the link */
+@media (max-width: 1100px){
+  html body #view-share .share-grid{ grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+  html body #view-share #card-feed{ grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; column-gap: 16px; align-content: start; }
+  html body #view-share #card-feed > .share-card-head{ grid-column: 1 / -1; }
+  html body #view-share #card-feed > *:not(.share-card-head):not(#feedScriptRow){ grid-column: 1; }
+  html body #view-share #card-feed > #feedScriptRow{ grid-column: 2; grid-row: 2 / span 5; }
+}
+@media (max-width: 820px){
+  html body #view-share .share-grid, html body.mobile-ui #view-share .share-grid{ grid-template-columns: 1fr 1fr !important; gap: 8px !important; }
+  html body #view-share #card-feed{ display: block; }
+  html body #view-share #card-feed > *:not(.share-card-head){ margin-top: 8px; }
+  html body #view-share .share-card-head{ padding: 8px 10px; }
+  html body #view-share .share-card > *:not(.share-card-head){ margin-inline: 8px; }
+  html body #view-share .share-actions button.btn, html body #view-share .share-actions .btn{ height: 34px; min-height: 34px; font-size: 13px; }
+}
