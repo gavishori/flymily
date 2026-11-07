@@ -75,12 +75,27 @@ function renderCategories(items) {
     : '<p class="empty">עדיין אין הוצאות</p>';
 }
 
+// Days start folded; the ones opened, or "open all", survive the minute-by-minute refresh
+const openDays = new Set();
+let allDaysOpen = false;
+
+function syncFoldButtons() {
+  const days = [...document.querySelectorAll('#items .day')];
+  $('daysOpenAll').disabled = !days.length || days.every((d) => d.open);
+  $('daysCloseAll').disabled = !days.some((d) => d.open);
+}
+
 function renderItems(items) {
-  if (!items.length) { $('items').innerHTML = '<p class="empty">עדיין אין הוצאות. עסקאות בכרטיס צ׳ייס יופיעו כאן תוך כ־10 דקות.</p>'; return; }
+  if (!items.length) {
+    $('items').innerHTML = '<p class="empty">עדיין אין הוצאות. עסקאות בכרטיס צ׳ייס יופיעו כאן תוך כ־10 דקות.</p>';
+    syncFoldButtons();
+    return;
+  }
   const days = new Map();
   items.forEach((i) => { const d = localDay(i.at); days.set(d, [...(days.get(d) || []), i]); });
   $('items').innerHTML = [...days].map(([day, list]) => `
-    <div class="day"><span>${esc(showDay(day))}</span><span>${money(list.reduce((s, i) => s + toUsd(i), 0))}</span></div>
+    <details class="day" data-day="${day}"${allDaysOpen || openDays.has(day) ? ' open' : ''}>
+    <summary><span>${esc(showDay(day))} <span class="count">${list.length}</span></span><span>${money(list.reduce((s, i) => s + toUsd(i), 0))}</span></summary>
     ${list.map((i) => `<div class="item">
       <div class="what">
         <div class="title">${esc(i.title)}</div>
@@ -89,7 +104,16 @@ function renderItems(items) {
           <span class="tag ${esc(i.source)}">${{ cash: 'מזומן', trip: 'מהנסיעה' }[i.source] || 'צ׳ייס'}</span></div>
       </div>
       <div class="amount">${money(i.amount, i.currency)}</div>
-    </div>`).join('')}`).join('');
+    </div>`).join('')}
+    </details>`).join('');
+  syncFoldButtons();
+}
+
+function foldAll(open) {
+  allDaysOpen = open;
+  openDays.clear();
+  document.querySelectorAll('#items .day').forEach((d) => { d.open = open; if (open) openDays.add(d.dataset.day); });
+  syncFoldButtons();
 }
 
 async function load() {
@@ -163,6 +187,15 @@ async function addCash(ev) {
   }
 }
 
+$('items').addEventListener('toggle', (ev) => {
+  const day = ev.target.dataset?.day;
+  if (!day) return;
+  if (ev.target.open) openDays.add(day);
+  else { openDays.delete(day); allDaysOpen = false; }
+  syncFoldButtons();
+}, true);
+$('daysOpenAll').addEventListener('click', () => foldAll(true));
+$('daysCloseAll').addEventListener('click', () => foldAll(false));
 $('byCategory').addEventListener('toggle', (ev) => {
   const cat = ev.target.dataset?.cat;
   if (cat) ev.target.open ? openCategories.add(cat) : openCategories.delete(cat);

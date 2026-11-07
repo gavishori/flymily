@@ -55,7 +55,21 @@
     .form-actions{ grid-column:1/-1; display:grid; grid-template-columns:1fr 2fr; gap:8px; margin-top:4px; }
     button.secondary{ background:transparent; color:var(--ink); border:1px solid var(--border); }
     @media (prefers-reduced-motion: reduce){ .plus{ transition:none; } }
-    .day{ margin-top:14px; display:flex; justify-content:space-between; font-weight:600; font-size:14px; color:var(--muted); border-bottom:1px solid var(--border); padding-bottom:4px; }
+    .list-head{ display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+    .list-head h2{ margin:0; }
+    .fold-buttons{ margin-inline-start:auto; display:flex; gap:6px; }
+    button.mini{ min-height:34px; padding:0 12px; font-size:13px; background:transparent; color:var(--brand); border:1px solid var(--border); }
+    button.mini:disabled{ opacity:.4; cursor:default; }
+    .day{ border-top:1px solid var(--border); }
+    .day:first-child{ border-top:none; }
+    .day > summary{ display:flex; align-items:center; gap:8px; padding:11px 0; cursor:pointer; list-style:none; font-weight:600; font-size:15px; }
+    .day > summary::-webkit-details-marker{ display:none; }
+    .day > summary::before{ content:"‹"; color:var(--muted); font-size:16px; line-height:1; display:inline-block; transform:rotate(-90deg); transition:transform .2s; }
+    .day[open] > summary::before{ transform:rotate(90deg); }
+    .day > summary > span:last-child{ margin-inline-start:auto; }
+    .day .count{ font-size:12px; font-weight:400; color:var(--muted); background:color-mix(in oklab, var(--brand) 9%, transparent); border-radius:99px; padding:0 7px; margin-inline-start:4px; }
+    .day[open] > summary{ border-bottom:1px solid var(--border); }
+    @media (prefers-reduced-motion: reduce){ .day > summary::before{ transition:none; } }
     .item{ display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px dashed var(--border); }
     .item:last-child{ border-bottom:none; }
     .item .what{ flex:1; min-width:0; }
@@ -129,10 +143,16 @@
     </section>
 
     <section class="card">
-      <h2>כל ההוצאות</h2>
+      <div class="list-head">
+        <h2>כל ההוצאות</h2>
+        <div class="fold-buttons">
+          <button id="daysOpenAll" class="mini" type="button">פתח הכל</button>
+          <button id="daysCloseAll" class="mini" type="button" disabled>צמצם הכל</button>
+        </div>
+      </div>
       <div id="items"><p class="empty">טוען...</p></div>
     </section>
   </main>
-  <script type="module" src="./spend.js?v=spend-20261107-5"></script>
+  <script type="module" src="./spend.js?v=spend-20261107-6"></script>
 </body>
 </html>
