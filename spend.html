@@ -37,11 +37,24 @@
     label{ display:grid; gap:4px; font-size:13px; font-weight:600; color:var(--muted); }
     .wide{ grid-column:1/-1; }
     input, select, button{ font:inherit; }
-    input, select{ width:100%; min-height:42px; padding:8px 10px; border:1px solid var(--border); border-radius:10px; background:var(--card); color:var(--ink); }
+    /* 16px keeps phones from zooming the page in when a field is tapped */
+    input, select{ width:100%; min-height:44px; padding:8px 10px; border:1px solid var(--border); border-radius:10px; background:var(--card); color:var(--ink); font-size:16px; font-weight:400; }
     button{ min-height:44px; border:none; border-radius:99px; background:var(--brand); color:#fff; font-weight:600; cursor:pointer; }
     button:disabled{ opacity:.6; cursor:wait; }
     @media (prefers-color-scheme: dark){ button{ color:#14162a; } }
-    .status{ min-height:1.3em; margin:6px 2px 0; font-size:14px; color:var(--brand); }
+    .status{ margin:8px 2px 0; font-size:14px; color:var(--brand); }
+    .status:empty{ display:none; }
+    .add-card{ padding:0; overflow:hidden; }
+    .add-card .status{ margin:0 16px 12px; }
+    .add-toggle{ display:flex; align-items:center; justify-content:center; gap:10px; width:100%; min-height:56px; border-radius:0; font-size:17px; }
+    .add-toggle[aria-expanded="true"]{ background:transparent; color:var(--ink); border-bottom:1px solid var(--border); }
+    .plus{ display:grid; place-items:center; width:26px; height:26px; border-radius:50%; background:rgba(255,255,255,.22); font-size:20px; line-height:1; transition:transform .2s; }
+    .add-toggle[aria-expanded="true"] .plus{ transform:rotate(45deg); background:color-mix(in oklab, var(--brand) 14%, transparent); color:var(--brand); }
+    #cashForm{ padding:14px 16px 16px; }
+    #cashForm[hidden]{ display:none; }
+    .form-actions{ grid-column:1/-1; display:grid; grid-template-columns:1fr 2fr; gap:8px; margin-top:4px; }
+    button.secondary{ background:transparent; color:var(--ink); border:1px solid var(--border); }
+    @media (prefers-reduced-motion: reduce){ .plus{ transition:none; } }
     .day{ margin-top:14px; display:flex; justify-content:space-between; font-weight:600; font-size:14px; color:var(--muted); border-bottom:1px solid var(--border); padding-bottom:4px; }
     .item{ display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px dashed var(--border); }
     .item:last-child{ border-bottom:none; }
@@ -60,6 +73,7 @@
       .totals{ grid-template-columns:1fr 1fr; }
       form{ grid-template-columns:1fr 1fr; }
       form label:first-child{ grid-column:1/-1; }
+      form label:has(#cashDay), form label:has(#cashCategory){ grid-column:1/-1; }
     }
   </style>
 </head>
@@ -71,15 +85,20 @@
   <main>
     <section class="card totals" id="totals" aria-live="polite"></section>
 
-    <section class="card">
-      <h2>הוספת הוצאה במזומן</h2>
-      <form id="cashForm">
+    <section class="card add-card">
+      <button id="cashOpen" class="add-toggle" type="button" aria-expanded="false" aria-controls="cashForm">
+        <span class="plus" aria-hidden="true">+</span> הוספת הוצאה במזומן
+      </button>
+      <form id="cashForm" hidden>
         <label>על מה?<input id="cashTitle" maxlength="80" required placeholder="למשל מונית"></label>
         <label>סכום<input id="cashAmount" type="number" inputmode="decimal" min="0.01" step="0.01" required></label>
         <label>מטבע<select id="cashCurrency"><option>USD</option><option>ILS</option><option>EUR</option></select></label>
         <label>קטגוריה<select id="cashCategory"></select></label>
         <label>יום<input id="cashDay" type="date" required></label>
-        <button id="cashSubmit" type="submit">הוסף</button>
+        <div class="form-actions">
+          <button id="cashCancel" class="secondary" type="button">ביטול</button>
+          <button id="cashSubmit" type="submit">הוסף</button>
+        </div>
       </form>
       <p id="cashStatus" class="status" role="status"></p>
     </section>
@@ -94,6 +113,6 @@
       <div id="items"><p class="empty">טוען...</p></div>
     </section>
   </main>
-  <script type="module" src="./spend.js?v=spend-20261107-2"></script>
+  <script type="module" src="./spend.js?v=spend-20261107-3"></script>
 </body>
 </html>

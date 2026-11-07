@@ -103,6 +103,18 @@ function showError(message) {
   $('totals').insertAdjacentHTML('afterend', `<section class="card"><p class="error">${esc(message)}</p></section>`);
 }
 
+function openCash(open) {
+  $('cashForm').hidden = !open;
+  $('cashOpen').setAttribute('aria-expanded', String(open));
+  if (open) {
+    $('cashStatus').textContent = '';
+    $('cashTitle').focus();
+  } else {
+    $('cashTitle').value = '';
+    $('cashAmount').value = '';
+  }
+}
+
 async function addCash(ev) {
   ev.preventDefault();
   const button = $('cashSubmit');
@@ -118,8 +130,7 @@ async function addCash(ev) {
       }),
     });
     if (!r.ok) throw new Error((await r.json()).error || r.status);
-    $('cashTitle').value = '';
-    $('cashAmount').value = '';
+    openCash(false);
     $('cashStatus').textContent = 'נוסף ✓';
     await load();
   } catch (e) {
@@ -132,6 +143,8 @@ async function addCash(ev) {
 
 $('cashCategory').innerHTML = CATEGORIES.map((c) => `<option>${esc(c)}</option>`).join('');
 $('cashForm').addEventListener('submit', addCash);
+$('cashOpen').addEventListener('click', () => openCash($('cashForm').hidden));
+$('cashCancel').addEventListener('click', () => { openCash(false); $('cashStatus').textContent = ''; });
 document.addEventListener('visibilitychange', () => { if (!document.hidden) load(); });
 setInterval(() => { if (!document.hidden) load(); }, REFRESH_MS);
 loadRates().then(load);
