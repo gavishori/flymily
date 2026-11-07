@@ -5,8 +5,8 @@
 //
 // FLYMILY fills in the four values below when you copy this script from the trip's share screen.
 // Then: script.google.com → New project → paste this file, replace appsscript.json with the one from
-// FLYMILY → run install() once and approve. It checks for new alerts every 10 minutes and stops by
-// itself two days after the trip ends.
+// FLYMILY → Services + → Gmail API → Add → run install() once and approve. It checks for new alerts
+// every 10 minutes and stops by itself two days after the trip ends.
 
 const TRIP_ID = '__TRIP_ID__';
 const INGEST_KEY = '__INGEST_KEY__';
@@ -15,7 +15,6 @@ const TRIP_TO = '__TO__';     // last day of the trip
 
 const FEED_URL = 'https://flymily-flights.gavishori.workers.dev/chase';
 const SENDER = 'no.reply.alerts@chase.com';
-const GMAIL = 'https://gmail.googleapis.com/gmail/v1/users/me/messages';
 // "You made a $6.94 transaction with CVS PHARMACY #11686", and the online/phone variant of it
 const PURCHASE = /\$([\d,]+(?:\.\d{1,2})?)\b.*?\btransaction with (.+)$/i;
 
@@ -52,26 +51,22 @@ function gmailDay(day, plusDays) {
   return Utilities.formatDate(new Date(dayStart(day, plusDays)), Session.getScriptTimeZone(), 'yyyy/MM/dd');
 }
 
-function gmail(path) {
-  const r = UrlFetchApp.fetch(GMAIL + path, { headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() } });
-  return JSON.parse(r.getContentText());
-}
-
 function listAlerts() {
   const q = 'from:' + SENDER + ' after:' + gmailDay(TRIP_FROM, -1) + ' before:' + gmailDay(TRIP_TO, 2);
   const ids = [];
-  let page = '';
+  let page;
+  // The built-in Gmail service (added under Services), which needs no Cloud project of its own
   do {
-    const r = gmail('?maxResults=500&q=' + encodeURIComponent(q) + (page ? '&pageToken=' + page : ''));
+    const r = Gmail.Users.Messages.list('me', { q: q, maxResults: 500, pageToken: page });
     (r.messages || []).forEach(function (m) { ids.push(m.id); });
-    page = r.nextPageToken || '';
+    page = r.nextPageToken;
   } while (page);
   return ids;
 }
 
 // Only the subject line and arrival time are fetched, never the body
 function readAlert(id) {
-  const m = gmail('/' + id + '?format=metadata&metadataHeaders=Subject');
+  const m = Gmail.Users.Messages.get('me', id, { format: 'metadata', metadataHeaders: ['Subject'] });
   const arrived = Number(m.internalDate);
   if (arrived < dayStart(TRIP_FROM) || arrived >= dayStart(TRIP_TO, 2)) return null;
   const subject = ((m.payload && m.payload.headers) || []).filter(function (h) { return h.name === 'Subject'; })[0];

@@ -171,6 +171,7 @@ function insertCard() {
           <li><span>פתחו את <a class="no-link-icon" href="https://script.google.com/home/projects/create" target="_blank" rel="noopener">script.google.com</a> בחשבון שמקבל את המיילים של צ׳ייס.</span></li>
           <li><span><button id="feedCopyScript" class="btn small" type="button">העתק סקריפט</button> והדביקו במקום כל התוכן של Code.gs.</span></li>
           <li><span>בהגדרות הפרויקט סמנו "Show appsscript.json", <button id="feedCopyManifest" class="btn small" type="button">העתק appsscript.json</button> והדביקו בקובץ הזה.</span></li>
+          <li><span>בצד ימין, ליד "שירותים", לחצו +, בחרו Gmail API ולחצו "הוספה".</span></li>
           <li><span>בחרו את הפונקציה install, לחצו Run ואשרו את ההרשאות.</span></li>
         </ol>
       </div>
