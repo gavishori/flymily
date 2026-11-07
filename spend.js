@@ -12,7 +12,7 @@ const token = location.hash.slice(1);
 const request = (path = '', options = {}) => fetch(API + token + path, { credentials: 'omit', referrerPolicy: 'no-referrer', cache: 'no-store', ...options });
 
 const SYMBOL = { USD: '$', ILS: '₪', EUR: '€' };
-const money = (n, cur = 'USD') => `${SYMBOL[cur] || ''}${n.toLocaleString('he-IL', { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 })}`;
+const money = (n, cur = 'USD') => `${SYMBOL[cur] || (cur + ' ')}${n.toLocaleString('he-IL', { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 })}`;
 const localDay = (iso) => { const d = new Date(iso); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 const showDay = (day) => new Date(day + 'T12:00:00').toLocaleDateString('he-IL', { weekday: 'long', day: 'numeric', month: 'long' });
 
@@ -27,8 +27,19 @@ async function loadRates() {
   } catch (e) { console.warn('rates unavailable', e); }
 }
 
-// Totals are in dollars, since that's what the card is charged in; cash in other currencies converts at today's rate
+// Totals are in dollars, since that's what the card is charged in; other currencies convert at today's rate
 const toUsd = (item) => (item.currency === 'USD' ? item.amount : usdPer[item.currency] ? item.amount / usdPer[item.currency] : 0);
+
+// The trip's own expenses can be in any currency, so rates for ones not loaded yet are fetched as they appear
+async function loadMissingRates(items) {
+  const missing = [...new Set(items.map((i) => i.currency))].filter((c) => !(c in usdPer) && /^[A-Z]{3}$/.test(c));
+  if (!missing.length) return;
+  try {
+    const r = await fetch(`https://api.frankfurter.dev/v1/latest?from=USD&to=${missing.join(',')}`, { credentials: 'omit', referrerPolicy: 'no-referrer' });
+    const { rates } = await r.json();
+    missing.forEach((c) => { usdPer[c] = rates?.[c] || null; });
+  } catch (e) { console.warn('rates unavailable', e); }
+}
 
 function renderTotals(items) {
   const spent = items.reduce((sum, i) => sum + toUsd(i), 0);
@@ -75,7 +86,7 @@ function renderItems(items) {
         <div class="title">${esc(i.title)}</div>
         ${i.note ? `<div class="note">${esc(i.note)}</div>` : ''}
         <div class="meta">${new Date(i.at).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })} · ${esc(i.category)}
-          <span class="tag${i.source === 'cash' ? ' cash' : ''}">${i.source === 'cash' ? 'מזומן' : 'צ׳ייס'}</span></div>
+          <span class="tag ${esc(i.source)}">${{ cash: 'מזומן', trip: 'מהנסיעה' }[i.source] || 'צ׳ייס'}</span></div>
       </div>
       <div class="amount">${money(i.amount, i.currency)}</div>
     </div>`).join('')}`).join('');
@@ -88,6 +99,7 @@ async function load() {
     if (r.status === 404) { showError('הקישור לא נמצא. ייתכן שהוא בוטל.'); return; }
     if (!r.ok) throw new Error(r.status);
     const data = await r.json();
+    await loadMissingRates(data.items);
     trip = data.trip;
     $('tripName').textContent = trip.name || 'הוצאות הנסיעה';
     $('tripDates').textContent = `${showDay(trip.start)} – ${showDay(trip.end)}`;

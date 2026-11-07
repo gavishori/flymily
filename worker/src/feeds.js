@@ -3,7 +3,8 @@
 //
 // POST /trips/:id/link      owner, signed in to FLYMILY   → { shareToken, ingestKey }   creates or updates the trip's link
 // GET  /trips/:id/feed      owner, signed in to FLYMILY   → { items }
-// POST /trips/:id/sync      owner, signed in to FLYMILY   → { updated, removed }   the owner's edits and deletions
+// POST /trips/:id/sync      owner, signed in to FLYMILY   → { updated, removed }   the owner's edits and deletions,
+//                                                        and expenses added in the trip itself (ids trip_<expense id>)
 // POST /chase               Gmail script, X-Ingest-Key     → { added }
 // GET  /shared/:token       anyone with the link           → { trip, items }
 // POST /shared/:token/cash  anyone with the link           → { item }
@@ -148,8 +149,10 @@ async function ownerFeed(request, tripId, env) {
   return [{ items: await listItems(env, tripId) }, 200];
 }
 
-// The owner edited or deleted copied items in the trip. Only items already in the feed change; a zero
-// amount is allowed, for a purchase kept on record but not counted.
+const OWNER_ITEM = /^trip_[\w-]{1,64}$/;
+
+// The owner edited or deleted copied items in the trip, or added, changed or deleted expenses of the trip's
+// own. A zero amount is allowed, for a purchase kept on record but not counted.
 async function syncFromOwner(request, tripId, env) {
   await requireOwner(request, tripId);
   await tripMeta(env, tripId);
@@ -158,17 +161,24 @@ async function syncFromOwner(request, tripId, env) {
   const current = new Map((await listItems(env, tripId)).map(i => [i.id, i]));
   let updated = 0, removed = 0;
   for (const change of changes) {
+    const ownItem = OWNER_ITEM.test(change?.id || "");
     const item = current.get(change?.id);
-    if (!item) continue;
+    if (!item && !ownItem) continue;
     if (change.deleted) {
+      if (!item) continue;
       await env.FEEDS.delete(`item:${tripId}:${item.id}`);
       removed++;
       continue;
     }
     const amount = Math.round(Number(change.amount) * 100) / 100;
-    if (!(amount >= 0 && amount < 100_000) || !CURRENCIES.includes(change.currency)) continue;
+    // The trip's own expenses can be in any currency the trip uses
+    const currencyOk = ownItem ? /^[A-Z]{3}$/.test(change.currency || "") : CURRENCIES.includes(change.currency);
+    if (!(amount >= 0 && amount < 100_000) || !currencyOk) continue;
+    const at = ownItem ? new Date(change.at) : null;
+    if (ownItem && isNaN(at)) continue;
     await putItem(env, tripId, {
-      ...item,
+      ...(item || { id: change.id, source: "trip" }),
+      ...(ownItem && { at: at.toISOString() }),
       amount,
       currency: change.currency,
       title: text(change.title, 80) || item.title,

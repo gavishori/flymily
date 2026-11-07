@@ -139,22 +139,44 @@ function ownerVersion(expense) {
   };
 }
 
-// Edits and deletions made in the trip go back to the feed, so the shared page matches. Only items that
-// actually differ are sent.
+const differs = (mine, item) => mine.amount !== item.amount || mine.currency !== item.currency || mine.title !== item.title
+  || mine.category !== item.category || mine.note !== (item.note || '') || (mine.at && mine.at !== item.at);
+
+// The trip's own expenses (not copied from the feed) appear on the shared page as trip_<expense id>
+function ownVersion(expense) {
+  const at = new Date(expense.dateIso || expense.createdAt || '');
+  if (isNaN(at)) return null;
+  const firstLine = String(expense.desc || '').split('\n')[0].trim();
+  const mine = ownerVersion(expense);
+  return { ...mine, title: expense.title || firstLine || expense.category || 'הוצאה', at: at.toISOString() };
+}
+
+// The shared page follows the trip: edits and deletions of copied items, and the trip's own expenses
+// added, changed or deleted. Only what actually differs is sent.
 async function syncBack(id, expenses, imported, feedItems) {
+  const feed = new Map(feedItems.map((i) => [i.id, i]));
   const changes = [];
   for (const item of feedItems) {
+    if (item.source === 'trip') {
+      if (!expenses[item.id.slice('trip_'.length)]) changes.push({ id: item.id, deleted: true });
+      continue;
+    }
     if (!imported[item.id]) continue;
     const expense = expenses[item.id];
     if (!expense) { changes.push({ id: item.id, deleted: true }); continue; }
     const mine = ownerVersion(expense);
-    const differs = mine.amount !== item.amount || mine.currency !== item.currency || mine.title !== item.title
-      || mine.category !== item.category || mine.note !== (item.note || '');
-    if (differs) changes.push({ id: item.id, ...mine });
+    if (differs(mine, item)) changes.push({ id: item.id, ...mine });
   }
-  if (!changes.length) return;
-  const r = await ownerFetch(`/trips/${id}/sync`, { method: 'POST', body: JSON.stringify({ items: changes }) });
-  if (!r.ok) throw new Error(r.status);
+  for (const [expenseId, expense] of Object.entries(expenses)) {
+    if (imported[expenseId] || feed.has(expenseId) || !/^[\w-]{1,64}$/.test(expenseId)) continue;
+    const mine = ownVersion(expense);
+    const current = feed.get(`trip_${expenseId}`);
+    if (mine && (!current || differs(mine, current))) changes.push({ id: `trip_${expenseId}`, ...mine });
+  }
+  for (let i = 0; i < changes.length; i += 100) {
+    const r = await ownerFetch(`/trips/${id}/sync`, { method: 'POST', body: JSON.stringify({ items: changes.slice(i, i + 100) }) });
+    if (!r.ok) throw new Error(r.status);
+  }
 }
 
 async function feedItems(id) {
@@ -173,7 +195,8 @@ async function importFeed(id) {
   const t = trip();
   const done = t.externalImported || {};
   await syncBack(id, t.expenses || {}, done, items).catch((e) => console.warn('feed sync failed', e));
-  const fresh = items.filter((i) => !done[i.id] && !(t.expenses || {})[i.id]);
+  // The trip's own expenses are already in the trip; only Chase and cash items are copied in
+  const fresh = items.filter((i) => i.source !== 'trip' && !done[i.id] && !(t.expenses || {})[i.id]);
   if (!fresh.length || tripId() !== id) return;
   const patch = {};
   for (const item of fresh) {
