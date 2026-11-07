@@ -367,3 +367,10 @@ html body[data-theme="dark"] .fl-calendar .fl-day.is-start, html body[data-theme
   .ht-list{ overflow: visible; }
   .ht-image{ width: 84px; height: 84px; }
 }
+
+/* ---------- Trip expense feed card (chase.js) ---------- */
+#card-feed .feed-row{ display: flex; gap: 8px; margin-top: 10px; }
+#card-feed .feed-row .input{ flex: 1; min-width: 0; font-size: 13px; }
+#card-feed .feed-steps{ margin: 12px 0 0; padding-inline-start: 20px; display: grid; gap: 8px; line-height: 1.6; }
+#card-feed .feed-steps .btn{ min-height: 32px; padding: 2px 12px; font-size: 13px; }
+#card-feed .feed-status{ min-height: 1.3em; margin-top: 10px; color: var(--brand); }

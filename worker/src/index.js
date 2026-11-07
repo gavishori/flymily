@@ -14,7 +14,11 @@
 // GET /hotels?place=Seattle&checkIn=2026-12-01&checkOut=2026-12-05&adults=2&children=0
 //     &available=1&freeCancel=1&breakfast=1&wellness=1   →   { hotels, hidden, searchesLeft }
 //
+// Trip expense feeds (Chase alerts and cash, shared with one person per trip) are in feeds.js.
+//
 // SERPAPI_KEY is a Worker secret: npx wrangler secret put SERPAPI_KEY
+
+import { feedsRoute, HttpError } from "./feeds.js";
 
 const ORIGIN_AIRPORT = "TLV";
 const ALLOWED_ORIGINS = ["https://gavishori.github.io", "http://localhost:5500", "http://localhost:5210"];
@@ -37,11 +41,21 @@ export default {
     const origin = request.headers.get("Origin");
     const headers = corsHeaders(origin);
     if (request.method === "OPTIONS") return new Response(null, { headers });
-    if (request.method !== "GET") return reply({ error: "method" }, 405, headers);
-    if (!ALLOWED_ORIGINS.includes(origin)) return reply({ error: "origin" }, 403, headers);
-    if (!env.SERPAPI_KEY) return reply({ error: "no-key" }, 503, headers);
-
     const url = new URL(request.url);
+
+    // The Gmail script runs on Google's servers with no Origin; it proves itself with the trip's key instead
+    if (url.pathname !== "/chase" && !ALLOWED_ORIGINS.includes(origin)) return reply({ error: "origin" }, 403, headers);
+    try {
+      const feed = await feedsRoute(request, url, env);
+      if (feed) return reply(feed[0], feed[1], headers);
+    } catch (e) {
+      if (e instanceof HttpError) return reply({ error: e.message }, e.status, headers);
+      console.error(e);
+      return reply({ error: "upstream" }, 502, headers);
+    }
+
+    if (request.method !== "GET") return reply({ error: "method" }, 405, headers);
+    if (!env.SERPAPI_KEY) return reply({ error: "no-key" }, 503, headers);
     try {
       if (url.pathname === "/hotels") return reply(await hotels(readHotelQuery(url), env), 200, headers);
       const query = readQuery(url);
@@ -63,7 +77,8 @@ class BadRequest extends Error {}
 function corsHeaders(origin) {
   return {
     "Access-Control-Allow-Origin": ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0],
-    "Access-Control-Allow-Methods": "GET, OPTIONS",
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Authorization, Content-Type",
     "Vary": "Origin",
   };
 }

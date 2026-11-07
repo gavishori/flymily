@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="referrer" content="no-referrer">
+  <meta name="robots" content="noindex">
+  <title>הוצאות הנסיעה · FLYMILY</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --brand:#4338ca; --accent:#f97316; --ok:#15803d; --danger:#b91c1c;
+      --bg:#f5f6fb; --card:#fff; --ink:#171a2b; --muted:#5d6478; --border:#e3e5ef;
+      --radius:16px; --shadow:0 8px 24px rgba(16,24,40,.08);
+    }
+    @media (prefers-color-scheme: dark){
+      :root{ --brand:#a5b4fc; --accent:#fb923c; --ok:#4ade80; --danger:#f87171;
+        --bg:#0e1020; --card:#181b30; --ink:#eceef8; --muted:#a2a8bf; --border:#2b2f4a; }
+    }
+    *{ box-sizing:border-box; }
+    body{ margin:0; background:var(--bg); color:var(--ink); font:16px/1.5 Rubik, system-ui, -apple-system, "Segoe UI", Arial, sans-serif; }
+    header{ background:#1e1b4b; color:#fff; padding:16px 16px 52px; }
+    header h1{ margin:0; font-size:1.35rem; }
+    header p{ margin:2px 0 0; opacity:.85; font-size:14px; }
+    main{ max-width:720px; margin:-38px auto 0; padding:0 16px 40px; display:grid; gap:14px; }
+    .card{ background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:16px; box-shadow:var(--shadow); }
+    .totals{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+    .stat .label{ font-size:13px; color:var(--muted); }
+    .stat .value{ font-size:1.35rem; font-weight:700; }
+    .stat .sub{ font-size:13px; color:var(--muted); }
+    .bar{ grid-column:1/-1; height:10px; border-radius:99px; background:color-mix(in oklab, var(--brand) 14%, var(--bg)); overflow:hidden; }
+    .bar span{ display:block; height:100%; background:linear-gradient(90deg,var(--brand),var(--accent)); }
+    .bar.over span{ background:var(--danger); }
+    h2{ margin:0 0 10px; font-size:1.05rem; }
+    form{ display:grid; grid-template-columns:2fr 1fr 1fr; gap:8px; }
+    label{ display:grid; gap:4px; font-size:13px; font-weight:600; color:var(--muted); }
+    .wide{ grid-column:1/-1; }
+    input, select, button{ font:inherit; }
+    input, select{ width:100%; min-height:42px; padding:8px 10px; border:1px solid var(--border); border-radius:10px; background:var(--card); color:var(--ink); }
+    button{ min-height:44px; border:none; border-radius:99px; background:var(--brand); color:#fff; font-weight:600; cursor:pointer; }
+    button:disabled{ opacity:.6; cursor:wait; }
+    @media (prefers-color-scheme: dark){ button{ color:#14162a; } }
+    .status{ min-height:1.3em; margin:6px 2px 0; font-size:14px; color:var(--brand); }
+    .day{ margin-top:14px; display:flex; justify-content:space-between; font-weight:600; font-size:14px; color:var(--muted); border-bottom:1px solid var(--border); padding-bottom:4px; }
+    .item{ display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px dashed var(--border); }
+    .item:last-child{ border-bottom:none; }
+    .item .what{ flex:1; min-width:0; }
+    .item .title{ font-weight:600; overflow-wrap:anywhere; }
+    .item .meta{ font-size:13px; color:var(--muted); }
+    .item .amount{ font-weight:700; white-space:nowrap; }
+    .tag{ font-size:11px; font-weight:600; padding:1px 8px; border-radius:99px; background:color-mix(in oklab, var(--brand) 12%, transparent); color:var(--brand); }
+    .tag.cash{ background:color-mix(in oklab, var(--ok) 14%, transparent); color:var(--ok); }
+    .cats{ display:grid; gap:6px; }
+    .cat{ display:flex; justify-content:space-between; font-size:14px; }
+    .empty, .error{ text-align:center; color:var(--muted); padding:20px 0; }
+    .error{ color:var(--danger); }
+    @media (max-width:520px){
+      .totals{ grid-template-columns:1fr 1fr; }
+      form{ grid-template-columns:1fr 1fr; }
+      form label:first-child{ grid-column:1/-1; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1 id="tripName">הוצאות הנסיעה</h1>
+    <p id="tripDates">טוען...</p>
+  </header>
+  <main>
+    <section class="card totals" id="totals" aria-live="polite"></section>
+
+    <section class="card">
+      <h2>הוספת הוצאה במזומן</h2>
+      <form id="cashForm">
+        <label>על מה?<input id="cashTitle" maxlength="80" required placeholder="למשל מונית"></label>
+        <label>סכום<input id="cashAmount" type="number" inputmode="decimal" min="0.01" step="0.01" required></label>
+        <label>מטבע<select id="cashCurrency"><option>USD</option><option>ILS</option><option>EUR</option></select></label>
+        <label>קטגוריה<select id="cashCategory"></select></label>
+        <label>יום<input id="cashDay" type="date" required></label>
+        <button id="cashSubmit" type="submit">הוסף</button>
+      </form>
+      <p id="cashStatus" class="status" role="status"></p>
+    </section>
+
+    <section class="card">
+      <h2>לפי קטגוריה</h2>
+      <div id="byCategory" class="cats"></div>
+    </section>
+
+    <section class="card">
+      <h2>כל ההוצאות</h2>
+      <div id="items"><p class="empty">טוען...</p></div>
+    </section>
+  </main>
+  <script type="module" src="./spend.js?v=spend-20261107-1"></script>
+</body>
+</html>

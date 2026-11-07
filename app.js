@@ -350,6 +350,7 @@ function applyAuthShellState(user){
 }
 
 window.__applyAuthShellState = applyAuthShellState;
+window.__reloadTrip = () => loadTrip();
 function openAuthEntryPoint(){
   const mobileOverlay = document.getElementById('mobileAuthOverlay');
   const authModal = document.getElementById('authModal');
@@ -3443,6 +3444,8 @@ async function loadTrip(){
   
   // Reset dirty state on successful load
   state.isDirty = false;
+  // chase.js listens to copy new feed items into the trip
+  document.dispatchEvent(new CustomEvent('flymily:trip-loaded', { detail: { id: t.id } }));
 
   setTimeout(async ()=>{
     if(state.currentTripId !== t.id) return;
