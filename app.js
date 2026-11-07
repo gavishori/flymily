@@ -4066,6 +4066,7 @@ $('#btnBudgetEdit').addEventListener('click', async ()=>{
   const budget = { USD: parseIntSafe($('#bUSD').value), EUR: parseIntSafe($('#bEUR').value), ILS: parseIntSafe($('#bILS').value) };
   const lockedRates = await fetchRatesOnce();
   await FB.updateDoc(ref, { budget, rates: lockedRates, budgetLocked: locking });
+  document.dispatchEvent(new CustomEvent('flymily:trip-details-saved', { detail: { id: state.currentTripId, changes: { budget, rates: lockedRates } } }));
   ['bUSD','bEUR','bILS'].forEach(id=> $('#'+id).disabled = locking);
   btn.classList.toggle('locked', locking);
   btn.textContent = locking ? 'ביטול נעילה' : 'קבע תקציב';
@@ -6262,6 +6263,8 @@ async function saveMetaChanges() {
             budget,
             rates: lockedRates
         });
+        document.dispatchEvent(new CustomEvent('flymily:trip-details-saved', { detail: { id: state.currentTripId,
+            changes: { destination, start: $('#metaStart').value, end: $('#metaEnd').value, budget, rates: lockedRates } } }));
         try{
             await upsertTripSummary({
                 id: state.currentTripId,

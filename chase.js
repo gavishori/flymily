@@ -49,6 +49,15 @@ function renderCard() {
   if (ready) $('feedLink').value = shareUrl(linked.shareToken);
 }
 
+const tripDetails = (t) => ({ name: t.destination || '', start: t.start, end: t.end, budgetUsd: budgetUsd(t) });
+
+// The same call as "צור קישור"; it keeps the link and only refreshes what the shared page shows
+async function pushTripDetails(id, t) {
+  if (!t.start || !t.end) return;
+  const r = await ownerFetch(`/trips/${id}/link`, { method: 'POST', body: JSON.stringify(tripDetails(t)) });
+  if (!r.ok) throw new Error(r.status);
+}
+
 async function createLink() {
   const t = trip();
   const status = $('feedStatus');
@@ -57,7 +66,7 @@ async function createLink() {
   try {
     const r = await ownerFetch(`/trips/${tripId()}/link`, {
       method: 'POST',
-      body: JSON.stringify({ name: t.destination || '', start: t.start, end: t.end, budgetUsd: budgetUsd(t) }),
+      body: JSON.stringify(tripDetails(t)),
     });
     const data = await r.json();
     if (!r.ok) throw new Error(data.error || r.status);
@@ -179,21 +188,26 @@ async function syncBack(id, expenses, imported, feedItems) {
   }
 }
 
-async function feedItems(id) {
+// { items, trip } for a trip with a link, or null
+async function ownerFeed(id) {
   const r = await ownerFetch(`/trips/${id}/feed`);
   if (r.status === 404) return null;
   if (!r.ok) throw new Error(r.status);
-  return (await r.json()).items;
+  return r.json();
 }
+
+const sameDetails = (a, b) => ['name', 'start', 'end', 'budgetUsd'].every((k) => (a?.[k] ?? null) === (b?.[k] ?? null));
 
 // Each feed item is copied once. `externalImported` remembers it even if it's later deleted from the trip,
 // so a deletion sticks.
 async function importFeed(id) {
   if (window.state?.shared?.readOnly || !window.auth?.currentUser) return;
-  const items = await feedItems(id);
-  if (!items) return;
+  const feed = await ownerFeed(id);
+  if (!feed) return;
+  const { items } = feed;
   const t = trip();
   const done = t.externalImported || {};
+  if (!sameDetails(tripDetails(t), feed.trip)) await pushTripDetails(id, t).catch((e) => console.warn('trip details sync failed', e));
   await syncBack(id, t.expenses || {}, done, items).catch((e) => console.warn('feed sync failed', e));
   // The trip's own expenses are already in the trip; only Chase and cash items are copied in
   const fresh = items.filter((i) => i.source !== 'trip' && !done[i.id] && !(t.expenses || {})[i.id]);
@@ -248,9 +262,19 @@ function insertCard() {
 document.addEventListener('flymily:expenses-saved', async ({ detail }) => {
   if (window.state?.shared?.readOnly || !window.auth?.currentUser) return;
   try {
-    const items = await feedItems(detail.id);
-    if (items) await syncBack(detail.id, detail.expenses || {}, detail.externalImported || {}, items);
+    const feed = await ownerFeed(detail.id);
+    if (feed) await syncBack(detail.id, detail.expenses || {}, detail.externalImported || {}, feed.items);
   } catch (e) { console.warn('feed sync failed', e); }
+});
+
+// The trip's name, dates or budget were just saved
+document.addEventListener('flymily:trip-details-saved', async ({ detail }) => {
+  if (window.state?.shared?.readOnly || !window.auth?.currentUser) return;
+  try {
+    const feed = await ownerFeed(detail.id);
+    const t = { ...trip(), ...detail.changes };
+    if (feed && !sameDetails(tripDetails(t), feed.trip)) await pushTripDetails(detail.id, t);
+  } catch (e) { console.warn('trip details sync failed', e); }
 });
 
 document.addEventListener('flymily:trip-loaded', ({ detail }) => {

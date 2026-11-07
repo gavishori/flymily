@@ -2,7 +2,7 @@
 // expenses added on the shared page. Kept per trip in KV; the owner's FLYMILY copies them into the trip.
 //
 // POST /trips/:id/link      owner, signed in to FLYMILY   → { shareToken, ingestKey }   creates or updates the trip's link
-// GET  /trips/:id/feed      owner, signed in to FLYMILY   → { items }
+// GET  /trips/:id/feed      owner, signed in to FLYMILY   → { items, trip }
 // POST /trips/:id/sync      owner, signed in to FLYMILY   → { updated, removed }   the owner's edits and deletions,
 //                                                        and expenses added in the trip itself (ids trip_<expense id>)
 // POST /chase               Gmail script, X-Ingest-Key     → { added }
@@ -145,8 +145,9 @@ async function createLink(request, tripId, env) {
 
 async function ownerFeed(request, tripId, env) {
   await requireOwner(request, tripId);
-  await tripMeta(env, tripId);
-  return [{ items: await listItems(env, tripId) }, 200];
+  const meta = await tripMeta(env, tripId);
+  const trip = { name: meta.name, start: meta.start, end: meta.end, budgetUsd: meta.budgetUsd };
+  return [{ items: await listItems(env, tripId), trip }, 200];
 }
 
 const OWNER_ITEM = /^trip_[\w-]{1,64}$/;
