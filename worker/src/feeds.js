@@ -23,7 +23,7 @@ const MERCHANT_CATEGORIES = [
   [/t-mobile|verizon|at&t|airalo|mint mobile/i, "תקשורת"],
   [/restaurant|cafe|coffee|starbucks|pizza|burger|grill|\bbar\b|kitchen|deli|bakery|taco|sushi|market|grocery|whole foods|trader joe|safeway|7-eleven|eats|doordash|mcdonald|chipotle|subway|dunkin|food/i, "מזון - מסעדות / סופר"],
   [/museum|ticket|zoo|tour|\bpark\b|theater|theatre|aquarium|stadium/i, "אטרקציות"],
-  [/cvs|walgreens|target|walmart|amazon|apple|nike|macy|store|shop|outlet|best buy|duane reade/i, "קניות"],
+  [/cvs|walgreens|target|walmart|amazon|apple|nike|macy|nordstrom|hudson|news|tj ?maxx|marshalls|ross|old navy|gap|h&m|zara|uniqlo|sephora|ulta|store|shop|outlet|mall|best buy|duane reade/i, "קניות"],
 ];
 
 export class HttpError extends Error {
