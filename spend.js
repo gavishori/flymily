@@ -46,11 +46,21 @@ function renderTotals(items) {
     + (trip.budgetUsd ? `<div class="bar${spent > trip.budgetUsd ? ' over' : ''}" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><span style="width:${pct}%"></span></div>` : '');
 }
 
+// Categories open to show their own purchases; which ones are open survives the minute-by-minute refresh
+const openCategories = new Set();
+
 function renderCategories(items) {
-  const sums = new Map();
-  items.forEach((i) => sums.set(i.category, (sums.get(i.category) || 0) + toUsd(i)));
-  $('byCategory').innerHTML = sums.size
-    ? [...sums].sort((a, b) => b[1] - a[1]).map(([cat, sum]) => `<div class="cat"><span>${esc(cat)}</span><strong>${money(sum)}</strong></div>`).join('')
+  const groups = new Map();
+  items.forEach((i) => groups.set(i.category, [...(groups.get(i.category) || []), i]));
+  const total = items.reduce((s, i) => s + toUsd(i), 0);
+  $('categoriesSummary').textContent = groups.size ? `${groups.size} קטגוריות · ${money(total)}` : '';
+  $('byCategory').innerHTML = groups.size
+    ? [...groups].map(([cat, list]) => [cat, list, list.reduce((s, i) => s + toUsd(i), 0)])
+      .sort((a, b) => b[2] - a[2])
+      .map(([cat, list, sum]) => `<details class="cat" data-cat="${esc(cat)}"${openCategories.has(cat) ? ' open' : ''}>
+        <summary><span>${esc(cat)} <span class="count">${list.length}</span></span><strong>${money(sum)}</strong></summary>
+        <ul>${list.map((i) => `<li><span><span class="when">${new Date(i.at).toLocaleDateString('he-IL', { day: 'numeric', month: 'numeric' })}</span> · <bdi>${esc(i.title)}</bdi></span><span>${money(i.amount, i.currency)}</span></li>`).join('')}</ul>
+      </details>`).join('')
     : '<p class="empty">עדיין אין הוצאות</p>';
 }
 
@@ -141,6 +151,10 @@ async function addCash(ev) {
   }
 }
 
+$('byCategory').addEventListener('toggle', (ev) => {
+  const cat = ev.target.dataset?.cat;
+  if (cat) ev.target.open ? openCategories.add(cat) : openCategories.delete(cat);
+}, true);
 $('cashCategory').innerHTML = CATEGORIES.map((c) => `<option>${esc(c)}</option>`).join('');
 $('cashForm').addEventListener('submit', addCash);
 $('cashOpen').addEventListener('click', () => openCash($('cashForm').hidden));

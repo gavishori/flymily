@@ -65,8 +65,25 @@
     .item .amount{ font-weight:700; white-space:nowrap; }
     .tag{ font-size:11px; font-weight:600; padding:1px 8px; border-radius:99px; background:color-mix(in oklab, var(--brand) 12%, transparent); color:var(--brand); }
     .tag.cash{ background:color-mix(in oklab, var(--ok) 14%, transparent); color:var(--ok); }
-    .cats{ display:grid; gap:6px; }
-    .cat{ display:flex; justify-content:space-between; font-size:14px; }
+    .fold > summary{ display:flex; align-items:center; gap:10px; cursor:pointer; list-style:none; min-height:32px; }
+    .fold > summary::-webkit-details-marker, .cat > summary::-webkit-details-marker{ display:none; }
+    .fold > summary h2{ margin:0; }
+    .fold > summary .sub{ margin-inline-start:auto; font-size:13px; color:var(--muted); }
+    .fold > summary::after, .cat > summary::before{ content:"‹"; display:inline-block; color:var(--muted); font-size:20px; line-height:1; transform:rotate(-90deg); transition:transform .2s; }
+    .fold[open] > summary::after, .cat[open] > summary::before{ transform:rotate(90deg); }
+    .fold[open] > summary{ margin-bottom:10px; }
+    .cats{ display:grid; gap:2px; }
+    .cat{ border-top:1px solid var(--border); }
+    .cat:first-child{ border-top:none; }
+    .cat > summary{ display:flex; align-items:center; gap:8px; padding:10px 0; cursor:pointer; list-style:none; font-size:15px; }
+    .cat > summary::before{ font-size:16px; }
+    .cat > summary strong{ margin-inline-start:auto; }
+    .cat .count{ font-size:12px; color:var(--muted); background:color-mix(in oklab, var(--brand) 9%, transparent); border-radius:99px; padding:0 7px; margin-inline-start:4px; }
+    .cat ul{ list-style:none; margin:0 0 10px; padding:0 24px 0 0; display:grid; gap:6px; }
+    .cat li{ display:flex; justify-content:space-between; gap:10px; font-size:14px; color:var(--muted); }
+    .cat li span:first-child{ overflow-wrap:anywhere; }
+    .cat .when{ font-size:12px; opacity:.8; }
+    @media (prefers-reduced-motion: reduce){ .fold > summary::after, .cat > summary::before{ transition:none; } }
     .empty, .error{ text-align:center; color:var(--muted); padding:20px 0; }
     .error{ color:var(--danger); }
     @media (max-width:520px){
@@ -104,8 +121,10 @@
     </section>
 
     <section class="card">
-      <h2>לפי קטגוריה</h2>
-      <div id="byCategory" class="cats"></div>
+      <details class="fold">
+        <summary><h2>לפי קטגוריה</h2><span id="categoriesSummary" class="sub"></span></summary>
+        <div id="byCategory" class="cats"></div>
+      </details>
     </section>
 
     <section class="card">
@@ -113,6 +132,6 @@
       <div id="items"><p class="empty">טוען...</p></div>
     </section>
   </main>
-  <script type="module" src="./spend.js?v=spend-20261107-3"></script>
+  <script type="module" src="./spend.js?v=spend-20261107-4"></script>
 </body>
 </html>
