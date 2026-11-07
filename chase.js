@@ -157,21 +157,21 @@ function insertCard() {
     <article class="share-card" id="card-feed">
       <header class="share-card-head">
         <h3>מעקב הוצאות מצ׳ייס</h3>
+        <p class="share-sub">עסקאות הכרטיס נכנסות לבד, ומי שמקבל את הקישור רואה רק את הנסיעה הזו</p>
         <span class="share-badge">Feed</span>
       </header>
-      <p class="muted" id="feedTrip"></p>
-      <p class="muted">קישור לאדם אחד שרואה רק את ההוצאות של הנסיעה הזו ויכול להוסיף מזומן. עסקאות בכרטיס צ׳ייס נכנסות לבד, דרך סקריפט שרץ בחשבון ה־Gmail שלכם.</p>
-      <div class="share-actions"><button id="feedCreate" class="btn primary" type="button">צור קישור</button></div>
+      <p class="feed-trip" id="feedTrip"></p>
+      <button id="feedCreate" class="btn primary feed-create" type="button">צור קישור</button>
       <div id="feedLinkRow" class="feed-row" hidden>
         <input id="feedLink" class="input" readonly dir="ltr" aria-label="קישור השיתוף">
         <button id="feedCopyLink" class="btn" type="button">העתק קישור</button>
       </div>
       <div id="feedScriptRow" hidden>
         <ol class="feed-steps">
-          <li>פתחו את <a class="no-link-icon" href="https://script.google.com/home/projects/create" target="_blank" rel="noopener">script.google.com</a> בחשבון שמקבל את המיילים של צ׳ייס.</li>
-          <li><button id="feedCopyScript" class="btn small" type="button">העתק סקריפט</button> והדביקו במקום כל התוכן של Code.gs.</li>
-          <li>בהגדרות הפרויקט סמנו "Show appsscript.json", <button id="feedCopyManifest" class="btn small" type="button">העתק appsscript.json</button> והדביקו בקובץ הזה.</li>
-          <li>בחרו את הפונקציה install, לחצו Run ואשרו את ההרשאות.</li>
+          <li><span>פתחו את <a class="no-link-icon" href="https://script.google.com/home/projects/create" target="_blank" rel="noopener">script.google.com</a> בחשבון שמקבל את המיילים של צ׳ייס.</span></li>
+          <li><span><button id="feedCopyScript" class="btn small" type="button">העתק סקריפט</button> והדביקו במקום כל התוכן של Code.gs.</span></li>
+          <li><span>בהגדרות הפרויקט סמנו "Show appsscript.json", <button id="feedCopyManifest" class="btn small" type="button">העתק appsscript.json</button> והדביקו בקובץ הזה.</span></li>
+          <li><span>בחרו את הפונקציה install, לחצו Run ואשרו את ההרשאות.</span></li>
         </ol>
       </div>
       <p id="feedStatus" class="muted feed-status" role="status"></p>
