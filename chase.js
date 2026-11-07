@@ -25,14 +25,15 @@ async function ownerFetch(path, options = {}) {
 const tripId = () => window.state?.currentTripId;
 const trip = () => window.state?.current || {};
 
-// Budget in dollars, using the trip's own locked rates
+// Budget in dollars. FLYMILY keeps the same budget in all three currencies, so it's one of them, not
+// their sum: dollars when set, otherwise shekels or euros at the trip's locked rate (as the trip's own bar does).
 function budgetUsd(t) {
   const b = t.budget || {};
   const r = t.rates || {};
-  let usd = Number(b.USD) || 0;
-  if (Number(b.ILS) && Number(r.USDILS)) usd += Number(b.ILS) / Number(r.USDILS);
-  if (Number(b.EUR) && Number(r.USDEUR)) usd += Number(b.EUR) / Number(r.USDEUR);
-  return Math.round(usd) || null;
+  if (Number(b.USD) > 0) return Math.round(Number(b.USD));
+  if (Number(b.ILS) > 0 && Number(r.USDILS)) return Math.round(Number(b.ILS) / Number(r.USDILS));
+  if (Number(b.EUR) > 0 && Number(r.USDEUR)) return Math.round(Number(b.EUR) / Number(r.USDEUR));
+  return null;
 }
 
 const shareUrl = (token) => new URL(`spend.html#${token}`, location.href).href;
