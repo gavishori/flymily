@@ -4221,7 +4221,11 @@ async function fillExpenseTripSelect(){
   const sel = document.getElementById('expTrip');
   if(!sel) return;
   const fill = ++expenseTripFill; // the dialog can open twice in a row; only the latest fill writes the list
-  const label = (t)=> `${t.destination || 'נסיעה'}${t.start ? ` · ${fmtDate(t.start)}–${fmtDate(t.end)}` : ''}`;
+  const pad = (n)=> String(n).padStart(2, '0');
+  const now = new Date();
+  const today = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  const status = (t)=> !t.start ? '' : t.start > today ? 'עתידית · ' : (!t.end || t.end >= today) ? 'פעילה · ' : '';
+  const label = (t)=> `${status(t)}${t.destination || 'נסיעה'}${t.start ? ` · ${fmtDate(t.start)}–${fmtDate(t.end)}` : ''}`;
   const currentOption = `<option value="${esc(state.currentTripId || '')}">${esc(label(state.current || {}))}</option>`;
   sel.innerHTML = currentOption;
   sel.value = state.currentTripId || '';
@@ -4230,9 +4234,10 @@ async function fillExpenseTripSelect(){
   try{
     const snap = await FB.getDocs(FB.query(FB.collection(db, 'tripSummaries'), FB.where('ownerUid', '==', state.user.uid)));
     if(fill !== expenseTripFill) return;
+    // Only trips still running or still ahead; a trip that ended isn't somewhere a new purchase goes
     const others = snap.docs.map(d=>({ id: d.id, ...d.data() }))
-      .filter(t=> t.id !== state.currentTripId)
-      .sort((a, b)=> String(b.start || '').localeCompare(String(a.start || '')));
+      .filter(t=> t.id !== state.currentTripId && t.end && t.end >= today)
+      .sort((a, b)=> String(a.start || '').localeCompare(String(b.start || '')));
     const chosen = sel.value;
     sel.innerHTML = currentOption + others.map(t=> `<option value="${esc(t.id)}">${esc(label(t))}</option>`).join('');
     sel.value = chosen;
