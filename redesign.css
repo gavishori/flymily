@@ -511,3 +511,14 @@ html body[data-theme="light"] #view-share #card-feed .feed-steps .btn{ backgroun
 #expenseModal .expense-trip-row{ display: grid; gap: 4px; margin-top: 10px; font-weight: 600; }
 #expenseModal .expense-trip-row .muted{ font-size: 12px; font-weight: 400; }
 #expenseModal #expTrip{ font-size: 16px; }
+
+/* ---------- Expanded note rows in the expenses and journal views ----------
+   In these views the table body is a block, so each row lays out as its own little table that shrinks to
+   its content, and the note took up only part of the width. An open note row becomes a full-width table
+   with a real cell. Folded rows carry [hidden] (the fold buttons set it), so they stay hidden. */
+@media (min-width: 821px){
+  html body #view-expenses.tabview .expenses-table tr.exp-item.exp-details:not([hidden]),
+  html body #view-journal.tabview .expenses-table tr.exp-item.exp-details:not([hidden]){ display: table !important; width: 100% !important; box-sizing: border-box; }
+  html body #view-expenses.tabview .expenses-table tr.exp-item + tr.exp-item.exp-details > td.cell.notes,
+  html body #view-journal.tabview .expenses-table tr.exp-item + tr.exp-item.exp-details > td.cell.notes{ display: table-cell !important; width: auto !important; }
+}
