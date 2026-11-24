@@ -233,7 +233,7 @@ function insertCard() {
     <article class="share-card" id="card-feed">
       <header class="share-card-head">
         <h3>מעקב הוצאות מצ׳ייס</h3>
-        <p class="share-sub">עסקאות הכרטיס נכנסות לבד, ומי שמקבל את הקישור רואה רק את הנסיעה הזו</p>
+        <p class="share-sub">עסקאות הכרטיס נכנסות לבד, ומי שמקבל את הקישור רואה רק את הנסיעה הזו. בנסיעות חופפות הן נכנסות לנסיעה שהסקריפט שלה מותקן, ואפשר להעביר הוצאה בעריכה ← "נסיעה"</p>
         <span class="share-badge">Feed</span>
       </header>
       <p class="feed-trip" id="feedTrip"></p>

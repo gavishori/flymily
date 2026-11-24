@@ -4214,6 +4214,31 @@ function lockExpenseMetaRowInline(){
   imp(locBtn,'background','#fff'); imp(locBtn,'box-shadow','none');
 }
 
+// The trip an expense belongs to. Picking another trip in the dialog moves the expense there on save,
+// for trips that overlap: Chase purchases land in the trip the Gmail script feeds, and some belong elsewhere.
+let expenseTripFill = 0;
+async function fillExpenseTripSelect(){
+  const sel = document.getElementById('expTrip');
+  if(!sel) return;
+  const fill = ++expenseTripFill; // the dialog can open twice in a row; only the latest fill writes the list
+  const label = (t)=> `${t.destination || 'נסיעה'}${t.start ? ` · ${fmtDate(t.start)}–${fmtDate(t.end)}` : ''}`;
+  const currentOption = `<option value="${esc(state.currentTripId || '')}">${esc(label(state.current || {}))}</option>`;
+  sel.innerHTML = currentOption;
+  sel.value = state.currentTripId || '';
+  sel.disabled = !!state.shared?.readOnly || !state.user?.uid;
+  if(sel.disabled) return;
+  try{
+    const snap = await FB.getDocs(FB.query(FB.collection(db, 'tripSummaries'), FB.where('ownerUid', '==', state.user.uid)));
+    if(fill !== expenseTripFill) return;
+    const others = snap.docs.map(d=>({ id: d.id, ...d.data() }))
+      .filter(t=> t.id !== state.currentTripId)
+      .sort((a, b)=> String(b.start || '').localeCompare(String(a.start || '')));
+    const chosen = sel.value;
+    sel.innerHTML = currentOption + others.map(t=> `<option value="${esc(t.id)}">${esc(label(t))}</option>`).join('');
+    sel.value = chosen;
+  }catch(err){ console.warn('trip list for moving an expense failed', err); }
+}
+
 function openExpenseModal(e){try{ window._rebindTextColorDots(); }catch(_){}
 
   /*__OPEN_EXP_PREFILL__*/
@@ -4233,6 +4258,7 @@ function openExpenseModal(e){try{ window._rebindTextColorDots(); }catch(_){}
   if(window._bindTextareasForModals) window._bindTextareasForModals();
 
   seedExpenseCategories();
+  fillExpenseTripSelect();
 
    $('#expenseModal').dataset.id = e?.id||'';
   try{ const tEl=document.getElementById("expTitle"); if(tEl) tEl.value = e?.title || ""; }catch(_){ }
@@ -4400,10 +4426,19 @@ async function saveExpense(){
     rates: expenseRates
   };
 
+  // Another trip was picked: the expense is written there and leaves this one. A copied Chase or cash
+  // item stays in externalImported here, so it isn't copied back in, and leaves this trip's shared page.
+  const targetTripId = document.getElementById('expTrip')?.value;
+  const moving = !!targetTripId && targetTripId !== state.currentTripId;
+  if(moving){
+    await FB.updateDoc(FB.doc(db, 'trips', targetTripId), { [`expenses.${id}`]: t.expenses[id] });
+    delete t.expenses[id];
+  }
+
   await FB.updateDoc(ref, { expenses: t.expenses, rates: t.rates });
   document.dispatchEvent(new CustomEvent('flymily:expenses-saved', { detail: { id: state.currentTripId, expenses: t.expenses, externalImported: t.externalImported } }));
   $('#expenseModal').close();
-  showToast('ההוצאה נשמרה');
+  showToast(moving ? `ההוצאה הועברה ל${document.getElementById('expTrip')?.selectedOptions?.[0]?.textContent?.split(' · ')[0] || 'נסיעה אחרת'}` : 'ההוצאה נשמרה');
   await loadTrip();
 }
 

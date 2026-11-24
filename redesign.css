@@ -506,3 +506,8 @@ html body[data-theme="dark"] #view-share .share-inline .input,
 html body[data-theme="dark"] #view-share #card-feed .feed-row .input{ background: #12152a; color: #eceef8; border-color: #363b5e; }
 html body[data-theme="light"] #view-share #card-feed .feed-row .btn,
 html body[data-theme="light"] #view-share #card-feed .feed-steps .btn{ background: #fff !important; color: var(--ink) !important; border: 1px solid var(--border) !important; }
+
+/* ---------- Expense dialog: which trip the expense belongs to ---------- */
+#expenseModal .expense-trip-row{ display: grid; gap: 4px; margin-top: 10px; font-weight: 600; }
+#expenseModal .expense-trip-row .muted{ font-size: 12px; font-weight: 400; }
+#expenseModal #expTrip{ font-size: 16px; }
